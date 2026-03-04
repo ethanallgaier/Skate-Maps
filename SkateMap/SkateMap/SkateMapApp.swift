@@ -19,7 +19,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         
-        FirebaseApp.configure()
         return true
     }
 }
@@ -30,10 +29,17 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 struct SkateMapApp: App {
     
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @State var authService: AuthService
+    
+    init() {
+            FirebaseApp.configure()
+            _authService = State(wrappedValue: AuthService())  // ← then create AuthService
+        }
     
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(authService)
         }
     }
 }

@@ -14,16 +14,15 @@ import Foundation
 
 
 
-// Identifiable, Codable need to add but dont know why
-struct UserInfo {
+struct UserInfo: Identifiable, Codable {
     var username: String = ""
     var bio: String = ""
-    var profilePicture: String = "" // shouldnt be a string
+    var profilePicture: String = "" 
     var id: String = ""
 }
 
 
-struct pinInfo {
+struct PinInfo: Identifiable, Codable {
     var id: String = ""
     var pinName: String = ""
     var pinDetails: String = ""

@@ -8,8 +8,18 @@
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(AuthService.self) var authService// check to see if user has logged in or not
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        if authService.isLoggedIn {
+            Text("Welcome to skate maps")
+            Button {
+                authService.logout()
+            } label: {
+                Text("Logout")
+            }
+        } else {
+            LoginView()
+        }
     }
 }
 

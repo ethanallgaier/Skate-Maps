@@ -1,0 +1,33 @@
+//
+//  Models.swift
+//  SkateMap
+//
+//  Created by Ethan Allgaier on 3/3/26.
+//
+
+import Foundation
+
+
+//Codable = is the important one here — it lets Swift automatically convert these structs to and from Firestore data. Without it, you'd have to manually map every single field yourself, which is tedious and error-prone.
+
+//Identifiable = just requires an id field so SwiftUI can tell items apart when displaying them in lists or on the map.
+
+
+
+// Identifiable, Codable need to add but dont know why
+struct UserInfo {
+    var username: String = ""
+    var bio: String = ""
+    var profilePicture: String = "" // shouldnt be a string
+    var id: String = ""
+}
+
+
+struct pinInfo {
+    var id: String = ""
+    var pinName: String = ""
+    var pinDetails: String = ""
+    var time: Date = Date()
+    var latitude: Double = 0.0
+    var longitude: Double = 0.0
+}

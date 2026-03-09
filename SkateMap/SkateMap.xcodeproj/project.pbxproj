@@ -16,9 +16,22 @@
 		05B9AB532F55EB5900531E6D /* SkateMap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SkateMap.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		05D31CFC2F59EEF10063D285 /* Exceptions for "SkateMap" folder in "SkateMap" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 05B9AB522F55EB5900531E6D /* SkateMap */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		05B9AB552F55EB5900531E6D /* SkateMap */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				05D31CFC2F59EEF10063D285 /* Exceptions for "SkateMap" folder in "SkateMap" target */,
+			);
 			path = SkateMap;
 			sourceTree = "<group>";
 		};
@@ -279,7 +292,8 @@
 				DEVELOPMENT_TEAM = F52D64RRY3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_FILE = SkateMap/Info.plist;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "\"We use your location to show where you are on the map.\"";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -311,7 +325,8 @@
 				DEVELOPMENT_TEAM = F52D64RRY3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_FILE = SkateMap/Info.plist;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "\"We use your location to show where you are on the map.\"";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";

@@ -8,21 +8,33 @@
 import SwiftUI
 
 struct ContentView: View {
-    @Environment(AuthService.self) var authService// check to see if user has logged in or not
+    
+    @Environment(AuthService.self) var authService// see if user has logged in
+
     var body: some View {
         if authService.isLoggedIn {
-            Text("Welcome to skate maps")
-            Button {
-                authService.logout()
-            } label: {
-                Text("Logout")
+           
+            TabView {
+                Tab("Map", systemImage: "map.circle") {
+                    MapView()
+                }
+                Tab("Profile", systemImage: "person") {
+                    ProfileView()
+                }
+                    
             }
+            
+//            Button {
+//                authService.logout()
+//            } label: {
+//                Text("Logout")
+//            }
         } else {
             LoginView()
         }
     }
 }
-
 #Preview {
     ContentView()
+        .environment(AuthService())  
 }

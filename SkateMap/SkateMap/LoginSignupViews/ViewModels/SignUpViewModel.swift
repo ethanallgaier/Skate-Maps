@@ -13,6 +13,7 @@ class SignUpViewModel {
     var username: String = ""
     var email: String = ""
     var password: String = ""
+    var isValid: Bool = false
     
     var isSignUpValid: Bool {
         !username.isEmpty && !email.isEmpty && password.count >= 6

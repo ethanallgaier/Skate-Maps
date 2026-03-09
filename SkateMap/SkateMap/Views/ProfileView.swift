@@ -9,14 +9,17 @@ import SwiftUI
 
 struct ProfileView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        NavigationStack {
+            VStack {
+               
+            }
+            .padding()
+            .navigationTitle("Profile")
         }
-        .padding()
     }
 }
 
 
+#Preview {
+    ProfileView()
+}

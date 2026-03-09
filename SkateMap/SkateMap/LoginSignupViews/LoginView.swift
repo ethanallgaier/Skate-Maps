@@ -15,16 +15,29 @@ struct LoginView: View {
     
     var body: some View {
         NavigationStack {
-            TextField("Enter Username", text: $viewModel.email)
+            Text("Skate Maps")
+                .font(Font.largeTitle)
+            
+    
+ //username
+            TextField("Enter email", text: $viewModel.email)
                 .textFieldStyle(.roundedBorder)
                 .padding()
+            
+ //password
             SecureField("Enter Password", text: $viewModel.password)
                 .padding()
                 .textFieldStyle(.roundedBorder)
             
-            
+            if !authService.errorMessage.isEmpty {
+                Text(authService.errorMessage)
+                    .foregroundStyle(.red)
+                    .font(.caption)
+            }
+            Spacer()
+//login button
             Button {
-                print("user logged in")
+              
                 Task { await authService.login(email: viewModel.email, password: viewModel.password) }
             } label: {
                 Text("Login")
@@ -33,6 +46,7 @@ struct LoginView: View {
             .buttonStyle(GlassButtonStyle())
             .frame(width:250)
             
+ //destination to signupView
             NavigationLink("Don't have an account? Sign Up") {
                 SignUpView()
             }

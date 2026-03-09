@@ -12,28 +12,63 @@ struct SignUpView: View {
     @Environment(AuthService.self) var authService// track if user has logged in or not
     
     var body: some View {
-        Text("Sign Up")
-        
-        
-        TextField("Enter a email", text: $viewModel.email)
-            .padding()
-        
-        SecureField("Enter a password", text: $viewModel.password)
-            .padding()
-        
-        
-        Button {
-            Task {
-                await authService.signUp(email: viewModel.email, password: viewModel.password, username: viewModel.username)
-            }
-        } label: {
+        VStack {
             Text("Sign Up")
+                .padding()
+            
+            Spacer()
+            
+            //Username
+            TextField("Enter a username", text: $viewModel.username)
+                .padding()
+            
+            if viewModel.isValid && viewModel.username.isEmpty {
+                Text("Please enter a username")
+                    .foregroundStyle(.red)
+                    .font(.footnote)
+            }
+            //Email
+            TextField("Enter a email", text: $viewModel.email)
+                .padding()
+            if viewModel.isValid && viewModel.email.isEmpty {
+                Text("Please enter a email")
+                    .foregroundStyle(.red)
+                    .font(.footnote)
+            }
+            //Password
+            SecureField("Enter a password", text: $viewModel.password)
+                .padding()
+            if viewModel.isValid && viewModel.email.isEmpty {
+                Text("Please enter a password")
+                    .foregroundStyle(.red)
+                    .font(.footnote)
+            } else if viewModel.isValid && viewModel.email.count < 6 {
+                Text("Password is too short")
+                    .foregroundStyle(.red)
+                    .font(.footnote)
+            }
+            
+            Spacer()
+            
+            //SignUp/Save/Next screen button-
+            Button {
+                viewModel.isValid = true
+                guard viewModel.isSignUpValid else { return }
+                
+                Task {
+                    await authService.signUp(email: viewModel.email, password: viewModel.password, username: viewModel.username)
+                }
+            } label: {
+                Text("Sign Up")
+            }
         }
     }
 }
 
 
 #Preview {
-    SignUpView()
-        .environment(AuthService())
+    NavigationStack {
+        SignUpView()
+    }
+    .environment(AuthService())
 }

@@ -8,11 +8,11 @@ import Foundation
 import FirebaseAuth
 
 
-//I need to understand this code i dont knwo whats goin on here
 @Observable
 class AuthService {
-    var currentUser: FirebaseAuth.User? = nil
-    private var listener: AuthStateDidChangeListenerHandle?
+    var currentUser: FirebaseAuth.User? = nil       //Stores current logged in user
+    var errorMessage: String = ""
+    private var listener: AuthStateDidChangeListenerHandle?     //watches login state changes
 
     init() {
         listener = Auth.auth().addStateDidChangeListener { _, user in
@@ -26,31 +26,40 @@ class AuthService {
         }
     }
 
-    var isLoggedIn: Bool { currentUser != nil }
+    var isLoggedIn: Bool { currentUser != nil }//checks if user is logged in
    
-    
+//login
     func login(email: String, password: String) async {
+        errorMessage = ""
         do {
-            try await Auth.auth().signIn(withEmail: email, password: password)
+            try await Auth.auth().signIn(withEmail: email, password: password)//asks firebase to login
         } catch {
-            print("Login error: \(error.localizedDescription)")
+            print("Login error: \(error.localizedDescription)")//if failed
+           errorMessage = error.localizedDescription
         }
     }
-
+    
+//signup
     func signUp(email: String, password: String, username: String) async {
         do {
+            errorMessage = ""
             let result = try await Auth.auth().createUser(withEmail: email, password: password)
             print("✅ Sign up success: \(result.user.uid)")
         } catch {
-            print("❌ Sign up error: \(error.localizedDescription)")
+            print("SignUp error: \(error.localizedDescription)")
+           errorMessage = error.localizedDescription
         }
     }
-
+    
+//logout
     func logout() {
+        errorMessage = ""
         do {
             try Auth.auth().signOut()
         } catch {
             print("Logout error: \(error.localizedDescription)")
+            errorMessage = error.localizedDescription
+            
         }
     }
 }

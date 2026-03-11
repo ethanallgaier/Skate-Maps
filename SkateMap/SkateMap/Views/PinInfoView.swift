@@ -8,11 +8,15 @@
 import SwiftUI
 
 struct PinInfoView: View {
+    
+    var pin: PinInfo
+    
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        Text(pin.pinName)
+        Text(pin.pinDetails)
     }
 }
 
-#Preview {
-    PinInfoView()
-}
+//#Preview {
+//    PinInfoView()
+//}

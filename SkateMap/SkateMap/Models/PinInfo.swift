@@ -11,7 +11,7 @@ import CoreLocation
 
 //What is @DocumentID?
 struct PinInfo: Identifiable, Codable {
-    @DocumentID var id: String? = ""
+    @DocumentID var id: String?
     var pinName: String = ""
     var pinDetails: String = ""
     var time: Date = Date()
@@ -20,6 +20,7 @@ struct PinInfo: Identifiable, Codable {
     var createdByUID: String = ""
     var createdByUsername: String = ""
     var imageURls: [String] = []
+    
     
     var coordinate: CLLocationCoordinate2D {//Format for placing pin.
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)

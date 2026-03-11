@@ -16,6 +16,8 @@ class MapViewModel: ObservableObject {
     @Published var pins: [PinInfo] = []
       
     
+    
+    
 // Fetch all pins from Firestore
       func fetchPins() {
           dataBase.collection("pins")
@@ -33,8 +35,11 @@ class MapViewModel: ObservableObject {
     
 //Add new pin to Firestore
     func addPin(name: String, details: String, coordinate: CLLocationCoordinate2D, username: String) {
-           guard let uid = Auth.auth().currentUser?.uid else { return }
-           
+        guard let uid = Auth.auth().currentUser?.uid else {
+            print("No user logged in!")
+            return
+        }
+        print("Saving pin for user: \(uid)")
            let newPin = PinInfo(
                pinName: name,
                pinDetails: details,
@@ -42,11 +47,12 @@ class MapViewModel: ObservableObject {
                latitude: coordinate.latitude,
                longitude: coordinate.longitude,
                createdByUID: uid,
-               createdByUsername: username
+               createdByUsername: username,
            )
            
            do {
                try dataBase.collection("pins").addDocument(from: newPin)
+               print("Pin saved successfully!")
            } catch {
                print("Error saving pin: \(error)")
            }

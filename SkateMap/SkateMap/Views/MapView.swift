@@ -13,43 +13,59 @@ struct MapView: View {
     @State private var locationManager = LocationManager()
     @StateObject var viewModel = MapViewModel()        //What is StateObject?
     @State private var showAddPin = false
+    @State private var showPinDetail = false
+    @State private var selectedPin: PinInfo?
     
     var body: some View {
         Map(position: $cameraPosition) {
             
-            UserAnnotation()
-           
+            UserAnnotation()//user position
+            
             ForEach(viewModel.pins) { pin in
                 Annotation(pin.pinName, coordinate: pin.coordinate) {
-                    Image(systemName: "mappin.circle.fill")
-                        .foregroundStyle(Color.red)
-                        .font(.largeTitle)
+                    Button {
+                        showPinDetail = true
+                        selectedPin = pin
+                    } label: {
+                        Image(systemName: "mappin")
+                            .frame(width: 10, height: 20)
+                    }
+                    .buttonStyle(.glass)
                 }
             }
         }
-        .mapStyle(.imagery)
-//Map buttons
+        .mapStyle(.hybrid)
+      
         .mapControls {
-            MapUserLocationButton()//current location
-            MapScaleView()//idk
+            MapUserLocationButton()// Tap for current location
         }
-        .onAppear {
-            viewModel.fetchPins()
-        }
-        .overlay(alignment: .bottomTrailing) {
+        //new pin button
+        .overlay(alignment: .topTrailing) {
             Button {
-                //Sheet to add pin
+                showAddPin = true
             } label: {
                 Image(systemName: "plus")
-                    .font(.title)
-                    
-                    
+                    .foregroundStyle(.blue)
+                    .frame(width: 20, height: 30)
+                    .bold(true)
             }
+            .padding(.top, 60)
             .padding()
             .buttonStyle(.glass)
         }
-
-       
+        //show all pins
+        .onAppear {
+            viewModel.fetchPins()
+        }
+        //new pin
+        .sheet(isPresented: $showAddPin) {
+            AddPinView(viewModel: viewModel, locationManager: locationManager)
+        }
+        //pin details
+        .sheet(item: $selectedPin) { pin in
+            PinInfoView(pin: pin)
+        }
+        
     }
 }
 

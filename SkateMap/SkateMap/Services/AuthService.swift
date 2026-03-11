@@ -57,9 +57,7 @@ class AuthService {
         do {
             try Auth.auth().signOut()
         } catch {
-            print("Logout error: \(error.localizedDescription)")
             errorMessage = error.localizedDescription
-            
         }
     }
 }

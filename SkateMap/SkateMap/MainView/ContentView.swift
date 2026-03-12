@@ -12,7 +12,7 @@ struct ContentView: View {
     @Environment(AuthService.self) var authService// see if user has logged in
 
     var body: some View {
-//        if authService.isLoggedIn {
+        if authService.isLoggedIn {
             TabView {
                 Tab("Map", systemImage: "map.circle") {
                     MapView()
@@ -21,9 +21,9 @@ struct ContentView: View {
                     ProfileView()
                 }
             }
-//        } else {
-//            LoginView()
-//        }
+        } else {
+            LoginView()
+        }
     }
 }
 #Preview {

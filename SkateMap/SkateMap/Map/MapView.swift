@@ -9,18 +9,21 @@ import SwiftUI
 import MapKit
 
 struct MapView: View {
+    
     @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)//preset if no current location
+    
     @State private var locationManager = LocationManager()
     @StateObject var viewModel = MapViewModel()        //What is StateObject?
+    @State private var selectedPin: PinInfo?
+    
     @State private var showAddPin = false
     @State private var showPinDetail = false
-    @State private var selectedPin: PinInfo?
     
     var body: some View {
         Map(position: $cameraPosition) {
             
             UserAnnotation()//user position
-            
+//Pins
             ForEach(viewModel.pins) { pin in
                 Annotation(pin.pinName, coordinate: pin.coordinate) {
                     Button {
@@ -63,9 +66,8 @@ struct MapView: View {
         }
         //pin details
         .sheet(item: $selectedPin) { pin in
-            PinInfoView(pin: pin)
+            PinInfoView(pin: pin, viewModel: viewModel)
         }
-        
     }
 }
 

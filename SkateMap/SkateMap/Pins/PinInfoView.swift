@@ -58,9 +58,8 @@ struct PinInfoView: View {
 
                     VStack(alignment: .leading, spacing: 12) {
 
-                        // Pin name
-                        Text(currentPin.pinName)
-                            .font(.title.bold())
+                      
+                      
 
                         // Pin details
                         if !currentPin.pinDetails.isEmpty {

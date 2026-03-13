@@ -21,6 +21,8 @@ struct ContentView: View {
                     ProfileView()
                 }
             }
+            .tint(.red)
+            .toolbarBackground(.ultraThinMaterial, for: .tabBar)
         } else {
             LoginView()
         }

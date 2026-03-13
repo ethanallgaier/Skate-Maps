@@ -16,7 +16,7 @@ struct AddPinView: View {
     @State private var selectedImages: [UIImage] = []//holds converted UIImages for preview + upload
     @State private var isSaving: Bool = false//disables Save button and shows spinner while uploading
     @State private  var showCamera: Bool = false
-    
+    @State private var selectedType: SpotType = .other
     
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: MapViewModel
@@ -32,9 +32,25 @@ struct AddPinView: View {
                     TextEditor(text: $pinDetails)
                             .frame(height: 100)
                             .padding(4)
-                    
                 }
-             
+                //Spot type
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(SpotType.allCases, id: \.self){ type in
+                            Button {
+                                selectedType = type
+                            } label: {
+                                Label(type.rawValue, systemImage: type.icon)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(selectedType == type ? Color.black : Color.gray.opacity(0.2))
+                                    .foregroundStyle(selectedType == type ? .white : .primary)
+                                    .clipShape(Capsule())
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
                 
                 Section("Photos") {
                     PhotosPicker(selection: $selectedItems, maxSelectionCount: 10, matching: .images) {
@@ -112,7 +128,8 @@ struct AddPinView: View {
                                     details: pinDetails,
                                     coordinate: coordinate,
                                     username: "test",
-                                    images: images // uses freshly converted images
+                                    images: images, // uses freshly converted images
+                                    spotType: selectedType
                                 )
                                 isSaving = false
                                 dismiss()

@@ -1,4 +1,5 @@
 import FirebaseFirestore
+import MapKit
 import FirebaseAuth
 import CoreLocation
 import UIKit
@@ -36,8 +37,26 @@ class MapViewModel: ObservableObject {
                 } ?? []
             }
     }
+    
+    @Published var searchResults: [MKMapItem] = [] // move this here too
+
+    func searchLocation(query: String) {
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query
+        let search = MKLocalSearch(request: request)
+        Task {
+            if let response = try? await search.start() {
+                DispatchQueue.main.async {
+                    self.searchResults = Array(response.mapItems.prefix(4))
+                }
+            }
+        }
+    }
+    
+    
+    
 //Add Pin
-    func addPin(name: String, details: String, coordinate: CLLocationCoordinate2D, username: String, images: [UIImage] = []) async {
+    func addPin(name: String, details: String, coordinate: CLLocationCoordinate2D, username: String, images: [UIImage] = [], spotType: SpotType = .other) async {
         guard let uid = Auth.auth().currentUser?.uid else {
             print("No user logged in!")
             return
@@ -56,7 +75,6 @@ class MapViewModel: ObservableObject {
                         print("❌ Upload failed: \(error)") // now we can see the actual error
                     }
                 }
-        print("🔗 URLs to save: \(uploadedURLs)")
 
         let newPin = PinInfo(
             pinName: name,
@@ -66,7 +84,8 @@ class MapViewModel: ObservableObject {
             longitude: coordinate.longitude,
             createdByUID: uid,
             createdByUsername: username,
-            imageURls: uploadedURLs
+            imageURls: uploadedURLs,
+            spotType: spotType
         )
 
         do {

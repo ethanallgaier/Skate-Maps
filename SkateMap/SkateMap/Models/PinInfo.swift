@@ -10,6 +10,36 @@ import FirebaseFirestore
 import CoreLocation
 
 //What is @DocumentID?
+
+//Need to kno what these mean
+enum SpotType: String, Codable, CaseIterable {
+    case rail = "Rail"
+    case stairs = "Stairs"
+    case ledge = "Ledge"
+    case bowl = "Bowl"
+    case manualPad = "Manual Pad"
+    case bank = "Bank"
+    case gap = "Gap"
+    case other = "Other"
+    
+    
+    //for Sf symbols 
+    var icon: String {
+        switch self {
+        case .rail:      return "minus.rectangle"
+        case .stairs:    return "figure.stairs"
+        case .ledge:     return "square.lefthalf.filled"
+        case .gap:       return "arrowshape.right"
+        case .bank:      return "angle"
+        case .bowl:      return "circle.bottomhalf.filled"
+        case .manualPad: return "rectangle.fill"
+        case .other:     return "mappin"
+        }
+    }
+}
+
+
+
 struct PinInfo: Identifiable, Codable {
     @DocumentID var id: String?
     var pinName: String = ""
@@ -20,6 +50,7 @@ struct PinInfo: Identifiable, Codable {
     var createdByUID: String = ""
     var createdByUsername: String = ""
     var imageURls: [String] = []
+    var spotType: SpotType = .other
     
     
     var coordinate: CLLocationCoordinate2D {//Format for placing pin.

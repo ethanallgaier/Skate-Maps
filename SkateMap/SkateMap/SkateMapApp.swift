@@ -13,33 +13,49 @@ import FirebaseCore
 //@UIApplicationDelegateAdaptor is the bridge between the old AppDelegate pattern and SwiftUI. Since SwiftUI apps don't use AppDelegate by default, this line plugs it back in so it still runs.
 //
 
-
 class AppDelegate: NSObject, UIApplicationDelegate {
-    
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
-        
         return true
     }
 }
 
+//idk what is goin on here exept the animation
 
+import SwiftUI
+import FirebaseCore
 
 @main
 struct SkateMapApp: App {
-    
+
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
-    @State var authService: AuthService
     
+    @State private var authService: AuthService
+    @State private var showSplash = true
+
     init() {
-            FirebaseApp.configure()
-            _authService = State(wrappedValue: AuthService())  // ← then create AuthService
-        }
-    
+        FirebaseApp.configure()
+        _authService = State(initialValue: AuthService())
+    }
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environment(authService)
+
+            Group {
+                if showSplash {
+                    SplashView()
+                } else {
+                    ContentView()
+                        .environment(authService)
+                }
+            }
+            .task {
+                try? await Task.sleep(for: .seconds(2))
+
+                withAnimation(.easeOut(duration: 0.5)) {
+                    showSplash = false
+                }
+            }
         }
     }
 }

@@ -40,7 +40,7 @@ enum SpotType: String, Codable, CaseIterable {
 
 
 
-struct PinInfo: Identifiable, Codable {
+struct PinInfo: Identifiable, Codable, Equatable{
     @DocumentID var id: String?
     var pinName: String = ""
     var pinDetails: String = ""

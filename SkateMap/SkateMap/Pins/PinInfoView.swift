@@ -18,6 +18,8 @@ struct PinInfoView: View {
     @State private var isUploading = false
     @State private var showCamera = false
     @State private var showDeleteConfirm = false
+    
+    
 
     @Environment(\.dismiss) var dismiss
 

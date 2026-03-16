@@ -4,6 +4,7 @@ import FirebaseAuth
 import CoreLocation
 import UIKit
 internal import Combine
+import SwiftUI
 
 class MapViewModel: ObservableObject {
     private let dataBase = Firestore.firestore()
@@ -114,6 +115,77 @@ class MapViewModel: ObservableObject {
             ])
         } catch {
             print("Error updating photos: \(error)")
+        }
+    }
+    
+    
+    func clusteredPins(for region: MKCoordinateRegion, from pins: [PinInfo]) -> [[PinInfo]] {
+        let threshold = region.span.latitudeDelta * 0.1
+        var clusters: [[PinInfo]] = []
+        var assigned = Set<String>()
+
+        for pin in pins {
+            guard let id = pin.id, !assigned.contains(id) else { continue }
+            var cluster = [pin]
+            assigned.insert(id)
+
+            for other in pins {
+                guard let otherId = other.id, !assigned.contains(otherId) else { continue }
+                if abs(pin.latitude - other.latitude) < threshold &&
+                   abs(pin.longitude - other.longitude) < threshold {
+                    cluster.append(other)
+                    assigned.insert(otherId)
+                }
+            }
+            clusters.append(cluster)
+        }
+        return clusters
+    }
+  //MARK: - LOCATION OF COMBINED PIN
+    func centerCoordinate(of cluster: [PinInfo]) -> CLLocationCoordinate2D {
+        let avgLat = cluster.map { $0.latitude }.reduce(0, +) / Double(cluster.count)
+        let avgLon = cluster.map { $0.longitude }.reduce(0, +) / Double(cluster.count)
+        return CLLocationCoordinate2D(latitude: avgLat, longitude: avgLon)
+    }
+//MARK: - COMBINED PIN UI
+    struct ClusterBubble: View {
+        let count: Int
+        @State private var scale: CGFloat = 0.0
+
+        var body: some View {
+            ZStack {
+                Circle()
+                    .frame(width: 40, height: 40)
+                Text("\(count)")
+                    .foregroundStyle(.white)
+                    .bold()
+            }
+            .scaleEffect(scale)
+            .onAppear {
+                withAnimation(.smooth(duration: 0.4)) {
+                    scale = 1.0
+                }
+            }
+        }
+    }
+    // MARK: - SINGLE PIN UI
+    struct PinMarker: View {
+        let action: () -> Void
+        @State private var scale: CGFloat = 0.0
+
+        var body: some View {
+            Button(action: action) {
+                Image(systemName: "mappin")
+                    .frame(width: 10, height: 20)
+                    .foregroundStyle(.white)
+            }
+            .buttonStyle(.glassProminent)
+            .scaleEffect(scale)
+            .onAppear {
+                withAnimation(.smooth(duration: 0.4)) {
+                    scale = 1.0
+                }
+            }
         }
     }
 }

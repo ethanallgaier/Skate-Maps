@@ -12,20 +12,24 @@ struct ContentView: View {
     @Environment(AuthService.self) var authService// see if user has logged in
 
     var body: some View {
-        if authService.isLoggedIn {
+//        if authService.isLoggedIn {
             TabView {
-                Tab("Map", systemImage: "map.circle") {
+                Tab("Explore", systemImage: "globe") {
                     MapView()
                 }
-                Tab("Profile", systemImage: "person") {
+                Tab("Profile", systemImage: "figure.stand") {
                     ProfileView()
                 }
+                Tab("Favorites", systemImage: "staroflife.fill") {
+                    
+                }
             }
-            .tint(.white)
+            .tint(.black)
+        
 //            .toolbarBackground(.ultraThinMaterial, for: .tabBar)
-        } else {
-            LoginView()
-        }
+//        } else {
+//            LoginView()
+//        }
     }
 }
 #Preview {

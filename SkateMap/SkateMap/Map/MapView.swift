@@ -10,15 +10,18 @@ struct MapView: View {
     @State private var selectedPin: PinInfo?
     @State private var showAddPin = false
     @State private var showPinDetail = false
-    @State private var selectedType: SpotType? = nil
+    @State private var selectedTypes: Set<SpotType> = []
     @State private var searchText = ""
     
     @State private var ignoreNextCameraChange = false
 
+    //track the camera
+    @State private var position: MapCameraPosition = .automatic
+    @State private var currentRegion: MKCoordinateRegion = MKCoordinateRegion()
 
     var filteredPins: [PinInfo] {
-        guard let selectedType else { return viewModel.pins }
-        return viewModel.pins.filter { $0.spotType == selectedType }
+        guard !selectedTypes.isEmpty else { return viewModel.pins }
+        return viewModel.pins.filter { selectedTypes.contains($0.spotType) }
     }
 
     // MARK: - Main
@@ -27,34 +30,57 @@ struct MapView: View {
 
             // MARK: MAP
             Map(position: $cameraPosition) {
+                
                 UserAnnotation()
-                ForEach(filteredPins) { pin in
-                    Annotation(pin.pinName, coordinate: pin.coordinate) {
-                        Button {
-                            selectedPin = pin
-                            ignoreNextCameraChange = true
-                            withAnimation(.spring) {
-                                cameraPosition = .region(MKCoordinateRegion(
-                                    center: pin.coordinate,
-                                    span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
-                                ))
+                
+                ForEach(viewModel.clusteredPins(for: currentRegion, from: filteredPins), id: \.first?.id) { cluster in
+                    if cluster.count == 1, let pin = cluster.first {
+                        // SINGLE PIN
+                        Annotation(pin.pinName, coordinate: pin.coordinate) {
+                            MapViewModel.PinMarker {
+                                selectedPin = pin
+                                ignoreNextCameraChange = true
+                                withAnimation(.spring) {
+                                    cameraPosition = .region(MKCoordinateRegion(
+                                        center: pin.coordinate,
+                                        span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
+                                    ))
+                                }
                             }
-                        } label: {
-                            Image(systemName: "mappin")
-                                .frame(width: 10, height: 20)
                         }
-                        .buttonStyle(.glass)
+                    } else if cluster.first != nil {
+                        //COMBINED PINS
+                        let center = viewModel.centerCoordinate(of: cluster)
+                        
+                        Annotation("", coordinate: center) {
+                            Button {
+                                ignoreNextCameraChange = true
+                                withAnimation(.spring) {
+                                    cameraPosition = .region(MKCoordinateRegion(
+                                        center: center,
+                                        span: MKCoordinateSpan(
+                                            latitudeDelta: currentRegion.span.latitudeDelta * 0.4,
+                                            longitudeDelta: currentRegion.span.longitudeDelta * 0.4
+                                        )
+                                    ))
+                                }
+                            } label: {
+                                MapViewModel.ClusterBubble(count: cluster.count)
+                            }
+                            
+                        }
                     }
                 }
             }
-            .onMapCameraChange(frequency: .onEnd) {
+            .onMapCameraChange(frequency: .onEnd) { context in // 👈 add "context in"
+                currentRegion = context.region // 👈 add this line
                 if ignoreNextCameraChange {
-                    ignoreNextCameraChange = false // first fire = our animation, ignore it
+                    ignoreNextCameraChange = false
                 } else {
-                    selectedPin = nil // second fire = user panning, dismiss the card
+                    selectedPin = nil
                 }
             }
-            .mapStyle(.imagery)
+            .mapStyle(.hybrid(pointsOfInterest: .excludingAll))
             .mapControls { }
             .onAppear { viewModel.fetchPins() }
             
@@ -86,7 +112,7 @@ struct MapView: View {
                 .padding(.bottom, selectedPin != nil ? 140 : 40)
             }
 
-            // MARK: PIN CARD
+            // MARK: MINI PIN CARD
             if let pin = selectedPin {
                 VStack {
                     Spacer()
@@ -163,19 +189,27 @@ struct MapView: View {
     var categoryChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                Button { selectedType = nil } label: {
+                Button {
+                    selectedTypes = []
+                } label: {
                     Text("All")
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .foregroundStyle(selectedType == nil ? .black : .primary)
+                        .foregroundStyle(selectedTypes.isEmpty ? .white : .primary)
                         .glassEffect()
                 }
                 ForEach(SpotType.allCases, id: \.self) { type in
-                    Button { selectedType = type } label: {
+                    Button {
+                        if selectedTypes.contains(type) {
+                            selectedTypes.remove(type)
+                        } else {
+                            selectedTypes.insert(type)
+                        }
+                    } label: {
                         Label(type.rawValue, systemImage: type.icon)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .foregroundStyle(selectedType == type ? .black : .primary)
+                            .foregroundStyle(selectedTypes.contains(type) ? .white : .primary)
                             .glassEffect()
                     }
                 }
@@ -189,11 +223,11 @@ struct MapView: View {
             cameraPosition = .userLocation(fallback: .automatic)
         } label: {
             Image(systemName: "location.fill")
-                .foregroundStyle(.black)
+                .foregroundStyle(.white)
                 .bold()
                 .frame(width: 30, height: 40)
         }
-        .buttonStyle(.glass)
+        .buttonStyle(.glassProminent)
     }
 //MARK: - ADD NEW PIN
     var addPinButton: some View {
@@ -201,11 +235,11 @@ struct MapView: View {
             showAddPin = true
         } label: {
             Image(systemName: "plus")
-                .foregroundStyle(.black)
+                .foregroundStyle(.white)
                 .bold()
                 .frame(width: 30, height: 40)
         }
-        .buttonStyle(.glass)
+        .buttonStyle(.glassProminent)
     }
 }
 

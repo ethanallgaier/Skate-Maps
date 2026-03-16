@@ -8,21 +8,21 @@
 import SwiftUI
 import PhotosUI
 import FirebaseAuth
+import MapKit
 
 struct PinInfoView: View {
     var pin: PinInfo
+    
     @ObservedObject var viewModel: MapViewModel
-
+    
     @State private var selectedItems: [PhotosPickerItem] = []
     @State private var selectedImages: [UIImage] = []
     @State private var isUploading = false
     @State private var showCamera = false
     @State private var showDeleteConfirm = false
     
-    
-
     @Environment(\.dismiss) var dismiss
-
+    
     // Check if the logged in user is the one who created this pin
     var isOwner: Bool {
         Auth.auth().currentUser?.uid == currentPin.createdByUID
@@ -32,13 +32,13 @@ struct PinInfoView: View {
     var currentPin: PinInfo {
         viewModel.pins.first(where: { $0.id == pin.id }) ?? pin
     }
-
+    
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-
-                    // Photos gallery
+                    
+                    //  TOP PHOTOS
                     if !currentPin.imageURls.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
@@ -57,31 +57,28 @@ struct PinInfoView: View {
                             .padding(.horizontal)
                         }
                     }
-
                     VStack(alignment: .leading, spacing: 12) {
-
-                      
-                      
-
-                        // Pin details
+                        
+                        
+                        // USER WHO MADE
+                        Label(currentPin.createdByUsername, systemImage: "person.circle")
+                            .foregroundStyle(.secondary)
+                        
+                        // DATE MADE
+                        Label(currentPin.time.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
+                            .foregroundStyle(.secondary)
+                        
+                        Divider()
+                        Text(currentPin.pinName)
+                        // PIN DETAILS
                         if !currentPin.pinDetails.isEmpty {
                             Text(pin.pinDetails)
                                 .foregroundStyle(.secondary)
                         }
-
                         Divider()
-
-                        // Who created it
-                        Label(currentPin.createdByUsername, systemImage: "person.circle")
-                            .foregroundStyle(.secondary)
-
-                        // Date added
-                        Label(currentPin.time.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
-                            .foregroundStyle(.secondary)
-
-                        Divider()
-
-                        // Add photos — only shown to the owner
+                        
+                        
+                        // ADD PHOTOS — only shown to the owner
                         if isOwner {
                             HStack {
                                 PhotosPicker(selection: $selectedItems, maxSelectionCount: 10, matching: .images) {
@@ -104,9 +101,9 @@ struct PinInfoView: View {
                                         isUploading = false
                                     }
                                 }
-
+                                
                                 Divider().frame(height: 20)
-
+                                
                                 Button {
                                     showCamera = true
                                 } label: {
@@ -115,12 +112,15 @@ struct PinInfoView: View {
                                 .disabled(isUploading)
                             }
                         }
+                       
+                        Spacer()
+                        PinMiniMapView(pin: currentPin)
                     }
                     .padding(.horizontal)
                 }
                 .padding(.bottom)
             }
-            .navigationTitle(currentPin.pinName)
+            .navigationTitle("Spot Info")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 // Delete button — only shown to the owner
@@ -135,6 +135,7 @@ struct PinInfoView: View {
                     }
                 }
             }
+            //DELETE BUTTON
             .confirmationDialog("Delete this pin?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
                 Button("Delete", role: .destructive) {
                     Task {
@@ -144,7 +145,8 @@ struct PinInfoView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             }
-            .sheet(isPresented: $showCamera, onDismiss: {
+            //SHOW CAMERA
+            .fullScreenCover(isPresented: $showCamera, onDismiss: {
                 guard !selectedImages.isEmpty else { return }
                 isUploading = true
                 Task {
@@ -159,6 +161,62 @@ struct PinInfoView: View {
     }
 }
 
-//#Preview {
-//    PinInfoView()
-//}
+struct PinMiniMapView: View {
+    var pin: PinInfo
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Map(initialPosition: .region(MKCoordinateRegion(
+                center: pin.coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            ))) {
+                Marker(pin.pinName, coordinate: pin.coordinate)
+                    .tint(.red)
+            }
+            .frame(height: 160)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .disabled(true)
+
+            Button {
+                openInMaps()
+            } label: {
+                Label("Get Directions", systemImage: "map.fill")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+            }
+            .buttonStyle(.glass)
+            .padding(.top, 8)
+        }
+        .mapStyle(.hybrid)
+    }
+
+    func openInMaps() {
+        let location = CLLocation(latitude: pin.coordinate.latitude, longitude: pin.coordinate.longitude)
+        let mapItem = MKMapItem(location: location, address: nil)
+        mapItem.name = pin.pinName
+        mapItem.openInMaps()
+    }
+}
+
+#Preview {
+    
+    let mockPin = PinInfo(
+        id: "1",
+        pinName: "Orem Skatepark",
+        pinDetails: "Super smooth ledges and a nice bowl.",
+        latitude: 40.2969,
+        longitude: -111.6946,
+        createdByUID: "test",
+        createdByUsername: "Ethan",
+  
+        imageURls: [
+            "https://picsum.photos/400"
+        ]
+    )
+    
+    PinInfoView(
+        pin: mockPin,
+        viewModel: MapViewModel()
+    )
+}
+

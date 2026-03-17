@@ -176,7 +176,7 @@ class MapViewModel: ObservableObject {
         var body: some View {
             Button(action: action) {
                 Image(systemName: "mappin")
-                    .frame(width: 10, height: 20)
+                    .frame(width: 5, height: 15)
                     .foregroundStyle(.white)
             }
             .buttonStyle(.glassProminent)
@@ -186,6 +186,36 @@ class MapViewModel: ObservableObject {
                     scale = 1.0
                 }
             }
+        }
+    }
+    //MARK: - PLACEMENT PIN
+    struct CircularTextPin: View {
+        let text = "CHOOSE A SPOT"
+        
+        var body: some View {
+            ZStack {
+                
+                Circle()
+                    .frame(width: 80, height: 80)
+                    .opacity(0.6)
+                
+                // TEXT AROUND CIRCLE
+//                ForEach(Array(text.enumerated()), id: \.offset) { index, letter in
+//                    Text(String(letter))
+//                        .font(.caption2)
+//                        .bold()
+//                        .foregroundStyle(.black)
+//                        .position(x: 40, y: 40)
+//                        .offset(y: -35)
+//                        .rotationEffect(.degrees(Double(index) / Double(text.count) * 300))
+//                }
+                
+                // CENTER PIN
+                Image(systemName: "figure.mixed.cardio")
+                    .foregroundStyle(.red)
+                    .shadow(radius: 4)
+            }
+            .frame(width: 80, height: 80)
         }
     }
 }

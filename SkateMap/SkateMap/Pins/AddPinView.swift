@@ -18,10 +18,11 @@ struct AddPinView: View {
     @State private  var showCamera: Bool = false
     @State private var selectedType: SpotType = .other
     
+    
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: MapViewModel
-    @ObservedObject var locationManager: LocationManager
     
+    @Binding var  coordinate: CLLocationCoordinate2D//pin placement
     
     var body: some View {
         NavigationStack {
@@ -29,27 +30,29 @@ struct AddPinView: View {
                 Section("Spot Info") {
                     TextField("Name", text: $pinName)
                     
-                    TextEditor(text: $pinDetails)
-                            .frame(height: 100)
-                            .padding(4)
+                    TextField("Spot Details", text: $pinDetails)
+                            
                 }
                 //Spot type
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(SpotType.allCases, id: \.self){ type in
-                            Button {
-                                selectedType = type
-                            } label: {
-                                Label(type.rawValue, systemImage: type.icon)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(selectedType == type ? Color.black : Color.gray.opacity(0.2))
-                                    .foregroundStyle(selectedType == type ? .white : .primary)
-                                    .clipShape(Capsule())
+                Section("Spot type") {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(SpotType.allCases, id: \.self){ type in
+                                Button {
+                                    selectedType = type
+                                } label: {
+                                    Label(type.rawValue, systemImage: type.icon)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(selectedType == type ? Color.black : Color.gray.opacity(0.2))
+                                        .foregroundStyle(selectedType == type ? .white : .primary)
+                                        .clipShape(Capsule())
+                                }
                             }
                         }
+                        
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 4)
                 }
                 
                 Section("Photos") {
@@ -101,7 +104,11 @@ struct AddPinView: View {
             }
             .toolbar {//cancel Button
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text("Cancel")
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
  //Save Button
@@ -109,8 +116,8 @@ struct AddPinView: View {
                         ProgressView()
                     } else {
                         
-                        Button("Save") {
-                            guard let coordinate = locationManager.userLocation else { return }
+                        Button("Create") {
+//                            guard let coordinate = locationManager.userLocation else { return }
                             isSaving = true
                             Task {
                                 // Convert picker items to UIImages HERE, right before upload
@@ -146,7 +153,7 @@ struct AddPinView: View {
 
 
 
-
-#Preview {
-    AddPinView(viewModel: MapViewModel(), locationManager: LocationManager())
-}
+//
+//#Preview {
+//    AddPinView(viewModel: MapViewModel(), locationManager: LocationManager())
+//}

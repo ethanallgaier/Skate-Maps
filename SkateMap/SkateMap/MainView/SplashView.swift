@@ -23,7 +23,7 @@ struct SplashView: View {
                     .foregroundStyle(.white)
                     .scaleEffect(isAnimating ? 1.5 : 0.9)
                     .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isAnimating)
-                Text("SKATE-MAPS")
+                Text("TESTING")
                     .font(.largeTitle.bold())
                     .foregroundStyle(.white)
             }

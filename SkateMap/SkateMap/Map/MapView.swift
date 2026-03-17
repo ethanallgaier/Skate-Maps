@@ -5,6 +5,7 @@ struct MapView: View {
 
     // MARK: - State
     @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
+    @State private var pinCoordinate: CLLocationCoordinate2D = CLLocationCoordinate2D()//dragndrop
     @State private var locationManager = LocationManager()
     @StateObject var viewModel = MapViewModel()
     @State private var selectedPin: PinInfo?
@@ -14,6 +15,7 @@ struct MapView: View {
     @State private var searchText = ""
     
     @State private var ignoreNextCameraChange = false
+    
 
     //track the camera
     @State private var position: MapCameraPosition = .automatic
@@ -27,12 +29,11 @@ struct MapView: View {
     // MARK: - Main
     var body: some View {
         ZStack(alignment: .top) {
-
-            // MARK: MAP
+            // MARK: -  MAP
+            
             Map(position: $cameraPosition) {
-                
-                UserAnnotation()
-                
+                UserAnnotation()//forogt what this is
+                    
                 ForEach(viewModel.clusteredPins(for: currentRegion, from: filteredPins), id: \.first?.id) { cluster in
                     if cluster.count == 1, let pin = cluster.first {
                         // SINGLE PIN
@@ -49,9 +50,9 @@ struct MapView: View {
                             }
                         }
                     } else if cluster.first != nil {
-                        //COMBINED PINS
+                       
                         let center = viewModel.centerCoordinate(of: cluster)
-                        
+                        //COMBINED PINS
                         Annotation("", coordinate: center) {
                             Button {
                                 ignoreNextCameraChange = true
@@ -72,8 +73,24 @@ struct MapView: View {
                     }
                 }
             }
-            .onMapCameraChange(frequency: .onEnd) { context in // 👈 add "context in"
-                currentRegion = context.region // 👈 add this line
+            
+            
+            //for dragndrop pin
+            .onMapCameraChange { context in
+                let center = context.region.center
+                let span = context.region.span
+
+                // tweak this number to control how high the pin sits
+                let verticalOffset = span.latitudeDelta * 0.25
+
+                pinCoordinate = CLLocationCoordinate2D(
+                    latitude: center.latitude + verticalOffset,
+                    longitude: center.longitude
+                )
+            }
+            //Whats this
+            .onMapCameraChange(frequency: .onEnd) { context in //
+                currentRegion = context.region //
                 if ignoreNextCameraChange {
                     ignoreNextCameraChange = false
                 } else {
@@ -81,38 +98,58 @@ struct MapView: View {
                 }
             }
             .mapStyle(.hybrid(pointsOfInterest: .excludingAll))
-            .mapControls { }
+            .mapControls { }//Leaving empty so compass wont appear
             .onAppear { viewModel.fetchPins() }
             
             .sheet(isPresented: $showAddPin) {
-                AddPinView(viewModel: viewModel, locationManager: locationManager)
+                AddPinView(viewModel: viewModel, coordinate: $pinCoordinate)
+                    .presentationDetents([.medium])
+                    .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+                    .interactiveDismissDisabled()
             }
             .sheet(isPresented: $showPinDetail) {
                 if let pin = selectedPin {
                     PinInfoView(pin: pin, viewModel: viewModel)
                 }
             }
-
-            // MARK: TOP STUFF
-            VStack(spacing: 8) {
-                searchBar
-                searchResults
-                categoryChips
-            }
-            .padding(.top, 5)
-
-            // MARK: SIDE STUFF
-            ZStack(alignment: .bottomTrailing) {
-                Color.clear
-                VStack(spacing: 8) {
-                    locationButton
-                    addPinButton
+            
+            //PIN PLACEMENT
+            if showAddPin {
+                GeometryReader { geo in
+                    ZStack {
+                        MapViewModel.CircularTextPin()
+                    }
+                        .offset(y: -50)  // shifts image up so the tip lands at center
+                                    .position(x: geo.size.width / 2, y: geo.size.height / 2 - 160)
                 }
-                .padding(.trailing)
-                .padding(.bottom, selectedPin != nil ? 140 : 40)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
             }
 
-            // MARK: MINI PIN CARD
+            // MARK: TOP FEATURES
+            if !showAddPin {
+                VStack(spacing: 8) {
+                    searchBar
+                    searchResults
+                    categoryChips
+                }
+                .padding(.top, 5)
+            }
+
+            // MARK: SIDE FEATURES
+            if !showAddPin {
+                ZStack(alignment: .bottomTrailing) {
+                    Color.clear
+                    VStack(spacing: 8) {
+                        locationButton
+                        addPinButton
+                    }
+                    .padding(.trailing)
+                    .padding(.bottom, selectedPin != nil ? 140 : 40)
+                }
+            }
+            
+            // MARK:  PIN DETAIL CARD
             if let pin = selectedPin {
                 VStack {
                     Spacer()
@@ -129,6 +166,8 @@ struct MapView: View {
         }
         .animation(.spring, value: selectedPin)
     }
+    
+    
 
     // MARK: - SEARCH BAR
     var searchBar: some View {
@@ -158,7 +197,10 @@ struct MapView: View {
         .padding(.horizontal)
     }
 
-    @ViewBuilder
+    
+    
+    @ViewBuilder//what is this
+    
     //MARK: - SEARCH RESULTS
     var searchResults: some View {
         if !viewModel.searchResults.isEmpty {
@@ -185,6 +227,8 @@ struct MapView: View {
             .padding(.horizontal)
         }
     }
+    
+    
 //MARK: - SPOT TYPE
     var categoryChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -217,7 +261,9 @@ struct MapView: View {
             .padding(.horizontal)
         }
     }
-//MARK: - CURRENT LOCATION
+    
+    
+//MARK: - CURRENT LOCATION BUTTON
     var locationButton: some View {
         Button {
             cameraPosition = .userLocation(fallback: .automatic)
@@ -229,9 +275,12 @@ struct MapView: View {
         }
         .buttonStyle(.glassProminent)
     }
-//MARK: - ADD NEW PIN
+    
+    
+//MARK: - ADD NEW PIN BUTTON
     var addPinButton: some View {
         Button {
+            pinCoordinate = currentRegion.center//center the map
             showAddPin = true
         } label: {
             Image(systemName: "plus")

@@ -13,27 +13,21 @@ struct ProfileView: View {
             ScrollView {
                 
            
-               profileCard()
+            
                 
-                VStack {
+                VStack() {
+                    Image(systemName: "person.circle.fill")
+                        .font(.custom( "", size: 125))
+                   Text("Ethan")
+                        .padding()
                     
-                   
                     
-                  
                 }
-//                    .padding()
-//                    .frame(width: 370, height: 350)
-//                    .background(.ultraThinMaterial)
-//                    .clipShape(RoundedRectangle(cornerRadius: 20))
-//                    .overlay(
-//                        RoundedRectangle(cornerRadius: 20)
-//                            .stroke(.white.opacity(0.2), lineWidth: 1)
-//                    )
-//                    .padding()
+
        
             }
             .padding()
-            .navigationTitle("Profile")
+//            .navigationTitle("Profile")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink(destination: SettingsView()) {

@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+//MARK: - MINI PREVIEW CARD. FIRST TAP ON A PIN
 struct PinPreviewCard: View {
     var pin: PinInfo
     var onTap: () -> Void

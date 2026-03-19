@@ -11,17 +11,25 @@ import CoreLocation
 
 
 struct UserInfo: Identifiable, Codable {
+    @DocumentID var id: String?
     var username: String = ""
     var bio: String = ""
-    var profilePicture: String = "" 
-    var id: String = ""
+    var profilePicture: String = ""
+    
+    // Explicit init to ensure no mismatches
+    init(id: String? = nil, username: String = "", bio: String = "", profilePicture: String = "") {
+        self.id = id
+        self.username = username
+        self.bio = bio
+        self.profilePicture = profilePicture
+    }
 }
 
 
 
 
 
-
+//Why: Firestore's @DocumentID property wrapper automatically maps the document's ID field when decoding. Without it, id is always empty after a fetch
 
 
 //Codable = is the important one here — it lets Swift automatically convert these structs to and from Firestore data. Without it, you'd have to manually map every single field yourself, which is tedious and error-prone.

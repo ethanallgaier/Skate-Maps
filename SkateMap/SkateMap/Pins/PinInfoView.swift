@@ -60,31 +60,44 @@ struct PinInfoView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         
                         
-                        // USER WHO MADE
+ // MARK: - WHAT USER CREATED THE PIN
                         Label(currentPin.createdByUsername, systemImage: "person.circle")
                             .foregroundStyle(.secondary)
                         
-                        // DATE MADE
+// MARK: - DATE MADE
                         Label(currentPin.time.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
                             .foregroundStyle(.secondary)
                         
                         Divider()
                         Text(currentPin.pinName)
-                        // PIN DETAILS
+//MARK: - PIN DETAILS
                         if !currentPin.pinDetails.isEmpty {
                             Text(pin.pinDetails)
                                 .foregroundStyle(.secondary)
                         }
                         Divider()
-                        
-                        
-                        // ADD PHOTOS — only shown to the owner
+ // MARK: - FAVORITE BUTTON
+                        HStack {
+                            Button {
+                                viewModel.toggleSave(pin: currentPin)
+                            } label: {
+                                Image(systemName: viewModel.isSaved(currentPin) ? "bookmark.fill" : "bookmark")
+                                    .foregroundStyle(.blue)
+                                
+                            }
+                            
+                         
+                            
+                            
+                        }
+  // MARK: - ADD PHOTOS — only shown to the owner
                         if isOwner {
                             HStack {
                                 PhotosPicker(selection: $selectedItems, maxSelectionCount: 10, matching: .images) {
                                     Label(isUploading ? "Uploading..." : "Library", systemImage: "photo.on.rectangle.angled")
                                 }
                                 .disabled(isUploading)
+                                
                                 .onChange(of: selectedItems) { _, newItems in
                                     guard !newItems.isEmpty else { return }
                                     isUploading = true
@@ -114,6 +127,7 @@ struct PinInfoView: View {
                         }
                        
                         Spacer()
+// MARK: -  MAP DIRECTIONS
                         PinMiniMapView(pin: currentPin)
                     }
                     .padding(.horizontal)
@@ -122,8 +136,9 @@ struct PinInfoView: View {
             }
             .navigationTitle("Spot Info")
             .navigationBarTitleDisplayMode(.inline)
+            
             .toolbar {
-                // Delete button — only shown to the owner
+ //MARK: - Delete button — only shown to the owner
                 if isOwner {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button(role: .destructive) {
@@ -135,6 +150,7 @@ struct PinInfoView: View {
                     }
                 }
             }
+            
             //DELETE BUTTON
             .confirmationDialog("Delete this pin?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
                 Button("Delete", role: .destructive) {
@@ -145,6 +161,7 @@ struct PinInfoView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             }
+            
             //SHOW CAMERA
             .fullScreenCover(isPresented: $showCamera, onDismiss: {
                 guard !selectedImages.isEmpty else { return }
@@ -161,6 +178,14 @@ struct PinInfoView: View {
     }
 }
 
+
+
+
+
+
+
+
+//MARK: - GET DIRECTIONS VIEW
 struct PinMiniMapView: View {
     var pin: PinInfo
 
@@ -173,7 +198,7 @@ struct PinMiniMapView: View {
                 Marker(pin.pinName, coordinate: pin.coordinate)
                     .tint(.red)
             }
-            .frame(height: 160)
+            .frame(height: 100)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .disabled(true)
 
@@ -182,7 +207,7 @@ struct PinMiniMapView: View {
             } label: {
                 Label("Get Directions", systemImage: "map.fill")
                     .frame(maxWidth: .infinity)
-                    .padding()
+                  
             }
             .buttonStyle(.glass)
             .padding(.top, 8)
@@ -197,6 +222,23 @@ struct PinMiniMapView: View {
         mapItem.openInMaps()
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #Preview {
     

@@ -27,6 +27,7 @@ struct AddPinView: View {
     var body: some View {
         NavigationStack {
             Form {
+                
                 Section("Spot Info") {
                     TextField("Name", text: $pinName)
                     
@@ -104,11 +105,7 @@ struct AddPinView: View {
             }
             .toolbar {//cancel Button
                 ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Text("Cancel")
-                    }
+                    Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
  //Save Button

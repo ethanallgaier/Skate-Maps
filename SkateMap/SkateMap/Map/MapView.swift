@@ -2,7 +2,7 @@ import SwiftUI
 import MapKit
 
 struct MapView: View {
-
+    
     // MARK: - State
     @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
     @State private var pinCoordinate: CLLocationCoordinate2D = CLLocationCoordinate2D()//dragndrop
@@ -16,16 +16,16 @@ struct MapView: View {
     
     @State private var ignoreNextCameraChange = false
     
-
+    
     //track the camera
     @State private var position: MapCameraPosition = .automatic
     @State private var currentRegion: MKCoordinateRegion = MKCoordinateRegion()
-
+    
     var filteredPins: [PinInfo] {
         guard !selectedTypes.isEmpty else { return viewModel.pins }
         return viewModel.pins.filter { selectedTypes.contains($0.spotType) }
     }
-
+    
     // MARK: - Main
     var body: some View {
         ZStack(alignment: .top) {
@@ -33,7 +33,7 @@ struct MapView: View {
             
             Map(position: $cameraPosition) {
                 UserAnnotation()//forogt what this is
-                    
+                
                 ForEach(viewModel.clusteredPins(for: currentRegion, from: filteredPins), id: \.first?.id) { cluster in
                     if cluster.count == 1, let pin = cluster.first {
                         // SINGLE PIN
@@ -50,7 +50,7 @@ struct MapView: View {
                             }
                         }
                     } else if cluster.first != nil {
-                       
+                        
                         let center = viewModel.centerCoordinate(of: cluster)
                         //COMBINED PINS
                         Annotation("", coordinate: center) {
@@ -79,10 +79,10 @@ struct MapView: View {
             .onMapCameraChange { context in
                 let center = context.region.center
                 let span = context.region.span
-
+                
                 // tweak this number to control how high the pin sits
                 let verticalOffset = span.latitudeDelta * 0.25
-
+                
                 pinCoordinate = CLLocationCoordinate2D(
                     latitude: center.latitude + verticalOffset,
                     longitude: center.longitude
@@ -119,13 +119,13 @@ struct MapView: View {
                     ZStack {
                         MapViewModel.CircularTextPin()
                     }
-                        .offset(y: -50)  // shifts image up so the tip lands at center
-                                    .position(x: geo.size.width / 2, y: geo.size.height / 2 - 160)
+                    .offset(y: -50)  // shifts image up so the tip lands at center
+                    .position(x: geo.size.width / 2, y: geo.size.height / 2 - 160)
                 }
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
             }
-
+            
             // MARK: TOP FEATURES
             if !showAddPin {
                 VStack(spacing: 8) {
@@ -135,7 +135,7 @@ struct MapView: View {
                 }
                 .padding(.top, 5)
             }
-
+            
             // MARK: SIDE FEATURES
             if !showAddPin {
                 ZStack(alignment: .bottomTrailing) {
@@ -157,7 +157,7 @@ struct MapView: View {
                         showPinDetail = true
                     } onDismiss: {
                         selectedPin = nil
-                     
+                        
                     }
                     .padding(.bottom, 20)
                 }
@@ -168,7 +168,7 @@ struct MapView: View {
     }
     
     
-
+    
     // MARK: - SEARCH BAR
     var searchBar: some View {
         HStack {
@@ -196,7 +196,7 @@ struct MapView: View {
         .glassEffect()
         .padding(.horizontal)
     }
-
+    
     
     
     @ViewBuilder//what is this
@@ -229,7 +229,7 @@ struct MapView: View {
     }
     
     
-//MARK: - SPOT TYPE
+    //MARK: - SPOT TYPE
     var categoryChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
@@ -263,7 +263,7 @@ struct MapView: View {
     }
     
     
-//MARK: - CURRENT LOCATION BUTTON
+    //MARK: - CURRENT LOCATION BUTTON
     var locationButton: some View {
         Button {
             cameraPosition = .userLocation(fallback: .automatic)
@@ -277,7 +277,7 @@ struct MapView: View {
     }
     
     
-//MARK: - ADD NEW PIN BUTTON
+    //MARK: - ADD NEW PIN BUTTON
     var addPinButton: some View {
         Button {
             pinCoordinate = currentRegion.center//center the map

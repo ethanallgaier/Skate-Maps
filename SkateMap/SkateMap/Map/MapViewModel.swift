@@ -7,12 +7,12 @@ internal import Combine
 import SwiftUI
 
 class MapViewModel: ObservableObject {
+    
     private let dataBase = Firestore.firestore()
 
     @Published var pins: [PinInfo] = []
 
-    
-//Delete Pin
+//MARK: - DELETE FUCNTION
     func deletePin(_ pin: PinInfo) async {
         guard let pinID = pin.id else { return }
         do {
@@ -23,8 +23,7 @@ class MapViewModel: ObservableObject {
         }
     }
     
-    
-  //Grab Pins
+//MARK: - LOAD ALL PINS ON SKATEMAPS
     func fetchPins() {
         dataBase.collection("pins")
             .order(by: "time", descending: true)
@@ -39,8 +38,8 @@ class MapViewModel: ObservableObject {
             }
     }
     
+//MARK: - SEARCH RESULTS
     @Published var searchResults: [MKMapItem] = [] // move this here too
-
     func searchLocation(query: String) {
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = query
@@ -54,9 +53,7 @@ class MapViewModel: ObservableObject {
         }
     }
     
-    
-    
-//Add Pin
+//MARK: - ADD PIN TO SKATEMAPS
     func addPin(name: String, details: String, coordinate: CLLocationCoordinate2D, username: String, images: [UIImage] = [], spotType: SpotType = .other) async {
         guard let uid = Auth.auth().currentUser?.uid else {
             print("No user logged in!")
@@ -97,7 +94,7 @@ class MapViewModel: ObservableObject {
         }
     }
 
-    // Adds more photos to an already existing pin
+//MARK: - ADD PHOTO TO A SPOT
     func addPhotos(to pin: PinInfo, images: [UIImage]) async {
         guard let pinID = pin.id else { return }
 
@@ -118,7 +115,7 @@ class MapViewModel: ObservableObject {
         }
     }
     
-    
+//MARK: - COMBINED PIN FUNCIONALLITY
     func clusteredPins(for region: MKCoordinateRegion, from pins: [PinInfo]) -> [[PinInfo]] {
         let threshold = region.span.latitudeDelta * 0.1
         var clusters: [[PinInfo]] = []
@@ -141,12 +138,14 @@ class MapViewModel: ObservableObject {
         }
         return clusters
     }
-  //MARK: - LOCATION OF COMBINED PIN
+    
+//MARK: - LOCATION OF COMBINED PIN
     func centerCoordinate(of cluster: [PinInfo]) -> CLLocationCoordinate2D {
         let avgLat = cluster.map { $0.latitude }.reduce(0, +) / Double(cluster.count)
         let avgLon = cluster.map { $0.longitude }.reduce(0, +) / Double(cluster.count)
         return CLLocationCoordinate2D(latitude: avgLat, longitude: avgLon)
     }
+    
 //MARK: - COMBINED PIN UI
     struct ClusterBubble: View {
         let count: Int
@@ -168,7 +167,8 @@ class MapViewModel: ObservableObject {
             }
         }
     }
-    // MARK: - SINGLE PIN UI
+    
+// MARK: - SINGLE PIN UI
     struct PinMarker: View {
         let action: () -> Void
         @State private var scale: CGFloat = 0.0
@@ -188,7 +188,8 @@ class MapViewModel: ObservableObject {
             }
         }
     }
-    //MARK: - PLACEMENT PIN
+    
+//MARK: - PLACEMENT PIN
     struct CircularTextPin: View {
         let text = "CHOOSE A SPOT"
         
@@ -211,11 +212,54 @@ class MapViewModel: ObservableObject {
 //                }
                 
                 // CENTER PIN
-                Image(systemName: "figure.mixed.cardio")
-                    .foregroundStyle(.red)
-                    .shadow(radius: 4)
+//                Image(systemName: "figure.mixed.cardio")
+//                    .foregroundStyle(.red)
+//                    .shadow(radius: 4)
+                Text("X")
+                    .bold()
+                    .foregroundStyle(.black)
             }
             .frame(width: 80, height: 80)
         }
+    }
+    
+//MARK: - SAVE/FAVORITE PINS
+    @Published var savedPinIDs: [String] = []//WHY IS THIS PUBLISHED
+    
+//MARK: - LOAD USERS SAVED PINS
+    func fetchSavedPins() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        Firestore.firestore().collection("users").document(uid)
+            .addSnapshotListener { snapshot, _ in
+                let data = snapshot?.data()
+                self.savedPinIDs = data?["savedPinIDs"] as? [String] ?? []
+            }
+    }
+    
+//MARK: -SAVE/UNSAVE TOGGLE
+    func toggleSave(pin: PinInfo) {
+        guard let uid = Auth.auth().currentUser?.uid,
+              let pinID = pin.id else { return }
+
+        let userRef = Firestore.firestore().collection("users").document(uid)
+
+        if savedPinIDs.contains(pinID) {
+            // Unsave
+            userRef.setData(["savedPinIDs": FieldValue.arrayRemove([pinID])], merge: true)
+        } else {
+            // Save
+            userRef.setData(["savedPinIDs": FieldValue.arrayUnion([pinID])], merge: true)
+        }
+    }
+    
+//MARK: - CHECKING IF PIN IS SAVED
+    func isSaved(_ pin: PinInfo) -> Bool {
+        guard let id = pin.id else { return false }
+        return savedPinIDs.contains(id)
+    }
+    
+    init() {
+        fetchPins()
+        fetchSavedPins()
     }
 }

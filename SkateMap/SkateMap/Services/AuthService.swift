@@ -15,7 +15,7 @@ class AuthService {
     var currentUser: UserInfo?
  
     
-
+    var profileRefreshID: UUID = UUID()
     private let db = Firestore.firestore()
     private var authHandle: AuthStateDidChangeListenerHandle?
 
@@ -76,18 +76,28 @@ class AuthService {
     // MARK: - Fetch User
     @MainActor
     func fetchUser(uid: String) async {
-        guard let snapshot = try? await db.collection("users").document(uid).getDocument(source: .server) else { return }
-        currentUser = try? snapshot.data(as: UserInfo.self)
+        print("🔍 Fetching user for UID: \(uid)")
+        do {
+            let snapshot = try await db.collection("users").document(uid).getDocument(source: .server)
+            print("📄 Raw Firestore data: \(snapshot.data() ?? [:])")  // ✅ see exactly what Firestore returns
+            currentUser = try snapshot.data(as: UserInfo.self)  // ✅ throws instead of silently failing
+            print("✅ fetchUser complete — username: \(currentUser?.username ?? "nil"), pic: \(currentUser?.profilePicture ?? "nil")")
+        } catch {
+            print("❌ fetchUser failed: \(error)")  // ✅ now we see the decode error
+        }
     }
 
     // MARK: - Update Username
     func updateUsername(_ username: String) async throws {
-        guard let uid = currentUser?.id else { return }
-        try await db.collection("users").document(uid).updateData(["username": username])
-        await MainActor.run {
-            guard let existing = currentUser else { return }
-            currentUser = UserInfo(id: existing.id, username: username, bio: existing.bio, profilePicture: existing.profilePicture)
+        guard let uid = Auth.auth().currentUser?.uid else { // ✅ use Auth directly, not currentUser
+            print("❌ No UID found")
+            return
         }
+        print("✅ Updating username to: \(username)")
+        try await db.collection("users").document(uid).updateData(["username": username])
+        print("✅ Firestore updated")
+        await fetchUser(uid: uid) // ✅ re-fetch instead of manually rebuilding
+        print("✅ currentUser after fetch: \(currentUser?.username ?? "nil")")
     }
 
     // MARK: - Update Bio
@@ -107,16 +117,22 @@ class AuthService {
 
     // MARK: - Update Profile Picture
     func updateProfilePicture(_ image: UIImage) async throws {
-        guard let uid = Auth.auth().currentUser?.uid else { return }
+        guard let uid = Auth.auth().currentUser?.uid else {
+            print("❌ No UID found")
+            return
+        }
+        print("✅ Starting upload for UID: \(uid)")
         let path = "profile_images/\(uid)_\(Date().timeIntervalSince1970)"
         let url = try await ImageUploader.upload(image: image, path: path)
+        print("✅ Image uploaded, URL: \(url)")
         try await db.collection("users").document(uid).updateData(["profilePicture": url])
-        await MainActor.run {
-            guard let existing = currentUser else { return }
-            currentUser = UserInfo(id: existing.id, username: existing.username, bio: existing.bio, profilePicture: url)
-        }
+        print("✅ Firestore updated")
+        URLCache.shared.removeAllCachedResponses()
+        await fetchUser(uid: uid) // ✅ re-fetch instead of manually rebuilding
+        await MainActor.run { profileRefreshID = UUID() }
+        print("✅ currentUser after fetch: \(currentUser?.profilePicture ?? "nil")")
     }
-
+    
     // MARK: - Update Email
     func updateEmail(newEmail: String, currentPassword: String) async throws {
         guard let user = Auth.auth().currentUser,

@@ -16,6 +16,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     let manager = CLLocationManager()
     @Published var userLocation: CLLocationCoordinate2D?
 
+    
     override init() {
         super.init()
         manager.requestWhenInUseAuthorization()

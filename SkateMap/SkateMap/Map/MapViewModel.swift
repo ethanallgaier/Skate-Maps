@@ -189,7 +189,7 @@ class MapViewModel: ObservableObject {
         }
     }
     
-//MARK: - PLACEMENT PIN
+//MARK: - PLACEMENT PIN(WHEN CHOOSING A SPOT)
     struct CircularTextPin: View {
         let text = "CHOOSE A SPOT"
         
@@ -261,5 +261,18 @@ class MapViewModel: ObservableObject {
     init() {
         fetchPins()
         fetchSavedPins()
+    }
+    
+    // MARK: - RATE A SPOT
+    func ratePin(_ pin: PinInfo, stars: Int) async {
+        guard let pinID = pin.id,
+              let uid = Auth.auth().currentUser?.uid else { return }
+        do {
+            try await dataBase.collection("pins").document(pinID).updateData([
+                "ratings.\(uid)": stars  // ✅ stores as ratings.uid = stars in Firestore
+            ])
+        } catch {
+            print("❌ Error rating pin: \(error)")
+        }
     }
 }

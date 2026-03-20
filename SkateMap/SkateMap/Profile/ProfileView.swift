@@ -5,6 +5,7 @@ struct ProfileView: View {
     @State var showSaved: Bool = false
     @ObservedObject var viewModel: MapViewModel
     @Environment(AuthService.self) var authService
+    var profileRefreshID: UUID = UUID()
     
     var myPins: [PinInfo] {
         guard let uid = Auth.auth().currentUser?.uid else { return [] }
@@ -19,10 +20,11 @@ struct ProfileView: View {
                     // MARK: - Profile Header
                     VStack(spacing: 12) {
                         profileAvatar
-                            .frame(width: 100, height: 100)
+                            .frame(width: 110, height: 110)
                             .clipShape(Circle())
                             .overlay(Circle().stroke(.background, lineWidth: 3))
                             .shadow(radius: 4)
+                            .id(authService.profileRefreshID)
                         
                         Text(authService.currentUser?.username ?? "Skater")
                             .font(.title2.bold())
@@ -80,7 +82,7 @@ struct ProfileView: View {
                 }
             }
             .scrollIndicators(.hidden)
-           
+            
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -130,33 +132,6 @@ struct ProfileView: View {
         }
     }
     
-    // MARK: - Pin List Row (reusable)
-    struct PinListRow: View {
-        let pin: PinInfo
-        var body: some View {
-            HStack(spacing: 12) {
-                Image(systemName: pin.spotType.icon)
-                    .font(.title2)
-                    .frame(width: 40)
-                    .foregroundStyle(.secondary)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(pin.pinName)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                    Text(pin.spotType.rawValue)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
-            }
-            .padding()
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-    }
 }
 
 #Preview {

@@ -23,7 +23,7 @@ enum SpotType: String, Codable, CaseIterable {
     case other = "Other"
     
     
-    //for Sf symbols 
+    //SPOT TYPE IMAGE
     var icon: String {
         switch self {
         case .rail:      return "minus.rectangle"
@@ -51,11 +51,20 @@ struct PinInfo: Identifiable, Codable, Equatable{
     var createdByUsername: String = ""
     var imageURls: [String] = []
     var spotType: SpotType = .other
+    var ratings: [String: Int] = [:] 
+
+        // computed — not stored in Firestore
+        var averageRating: Double {
+            guard !ratings.isEmpty else { return 0 }
+            return Double(ratings.values.reduce(0, +)) / Double(ratings.count)
+        }
+
     
     
     var coordinate: CLLocationCoordinate2D {//Format for placing pin.
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
+    
 }
 
 

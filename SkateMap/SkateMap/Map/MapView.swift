@@ -4,10 +4,11 @@ import MapKit
 struct MapView: View {
     
     // MARK: - State
+    
+    @ObservedObject var viewModel: MapViewModel
     @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
     @State private var pinCoordinate: CLLocationCoordinate2D = CLLocationCoordinate2D()//dragndrop
     @State private var locationManager = LocationManager()
-    @StateObject var viewModel = MapViewModel()
     @State private var selectedPin: PinInfo?
     @State private var showAddPin = false
     @State private var showPinDetail = false
@@ -52,7 +53,7 @@ struct MapView: View {
                     } else if cluster.first != nil {
                         
                         let center = viewModel.centerCoordinate(of: cluster)
-                        //COMBINED PINS
+//COMBINED PINS
                         Annotation("", coordinate: center) {
                             Button {
                                 ignoreNextCameraChange = true
@@ -292,6 +293,6 @@ struct MapView: View {
     }
 }
 
-#Preview {
-    MapView()
-}
+//#Preview {
+//    MapView()
+//}

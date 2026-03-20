@@ -10,13 +10,13 @@ import SwiftUI
 struct ContentView: View {
     
     @Environment(AuthService.self) var authService// see if user has logged in
-    @State private var viewModel = MapViewModel()
+    @StateObject private var viewModel = MapViewModel()
     
     var body: some View {
         if authService.isLoggedIn {
             TabView {
                 Tab("Explore", systemImage: "globe") {
-                    MapView()
+                    MapView(viewModel: viewModel)
                 }
                 Tab("Profile", systemImage: "figure.stand") {
                     ProfileView(viewModel: viewModel)

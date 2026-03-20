@@ -15,13 +15,21 @@ struct UserInfo: Identifiable, Codable {
     var username: String = ""
     var bio: String = ""
     var profilePicture: String = ""
-    
-    // Explicit init to ensure no mismatches
+
     init(id: String? = nil, username: String = "", bio: String = "", profilePicture: String = "") {
         self.id = id
         self.username = username
         self.bio = bio
         self.profilePicture = profilePicture
+    }
+
+    // ✅ Add this so missing fields fall back to defaults instead of crashing
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(String.self, forKey: .id)
+        username = try container.decodeIfPresent(String.self, forKey: .username) ?? ""
+        bio = try container.decodeIfPresent(String.self, forKey: .bio) ?? ""
+        profilePicture = try container.decodeIfPresent(String.self, forKey: .profilePicture) ?? ""
     }
 }
 

@@ -21,21 +21,23 @@ struct SettingsView: View {
     @State private var showDeleteAccount = false
     @State private var selectedItem: PhotosPickerItem?
     @State private var isUploadingPhoto = false
+    @State private var showLogout = false
     
     var body: some View {
         List {
             
-            // MARK: - Avatar
+            // MARK: - PROFILE PIC
             Section {
                 HStack {
                     Spacer()
                     ZStack(alignment: .bottomTrailing) {
-                        PhotosPicker(selection: $selectedItem, matching: .any(of: [.images, .not(.livePhotos)])) {
+                        PhotosPicker(selection: $selectedItem, matching: .images) {
                             profileAvatar
-                                .frame(width: 90, height: 90)
+                                .frame(width: 100, height: 100)
                                 .clipShape(Circle())
                                 .overlay(Circle().stroke(.background, lineWidth: 3))
                         }
+                        .id(authService.profileRefreshID)
                         .onChange(of: selectedItem) { _, newItem in
                             print("📸 selectedItem changed: \(String(describing: newItem))")
                             guard let newItem else { return }
@@ -50,7 +52,7 @@ struct SettingsView: View {
                                 do {
                                     
                                     try await authService.updateProfilePicture(image)
-                                    URLCache.shared.removeAllCachedResponses()
+                                    
                                 } catch {
                                     print("❌ Upload error: \(error.localizedDescription)") // ← check Xcode console
                                 }
@@ -82,7 +84,7 @@ struct SettingsView: View {
                 .listRowBackground(Color.clear)
             }
             
-            // MARK: - Profile
+            // MARK: - PROFILE
             Section("Profile") {
                 SettingsRow(icon: "person", label: "Username", value: authService.currentUser?.username) {
                     showEditUsername = true
@@ -92,7 +94,7 @@ struct SettingsView: View {
                 }
             }
             
-            // MARK: - Account
+            // MARK: - ACCOUNT
             Section("Account") {
                 SettingsRow(icon: "envelope", label: "Email", value: Auth.auth().currentUser?.email) {
                     showEditEmail = true
@@ -102,12 +104,19 @@ struct SettingsView: View {
                 }
             }
             
-            // MARK: - Danger Zone
+            // MARK: - DELETE ZONE
             Section {
                 Button(role: .destructive) {
-                    authService.logout()
+                    showLogout = true
+//                    authService.logout()
                 } label: {
                     Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")
+                }
+                .confirmationDialog("Are you sure you want to log out?", isPresented: $showLogout, titleVisibility: .visible) {
+                    Button("Log Out", role: .destructive) {
+                        authService.logout()
+                    }
+                    Button("Cancel", role: .cancel) { }
                 }
                 
                 Button(role: .destructive) {
@@ -120,35 +129,45 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         
-        // MARK: - Sheets
+        // MARK: - SHEETS
         .sheet(isPresented: $showEditUsername) {
             EditFieldSheet(title: "Username", placeholder: "New username", current: authService.currentUser?.username ?? "") { newValue in
                 try await authService.updateUsername(newValue)
             }
         }
+        //BIO
         .sheet(isPresented: $showEditBio) {
             EditFieldSheet(title: "Bio", placeholder: "Tell people about yourself", current: authService.currentUser?.bio ?? "", multiline: true) { newValue in
                 try await authService.updateBio(newValue)
             }
         }
+        //EMAIL
         .sheet(isPresented: $showEditEmail) {
             PasswordConfirmSheet(title: "Change Email", fieldLabel: "New Email", isEmail: true) { newValue, password in
                 try await authService.updateEmail(newEmail: newValue, currentPassword: password)
             }
         }
+        //PASSWORD
         .sheet(isPresented: $showEditPassword) {
             ChangePasswordSheet { current, new in
                 try await authService.updatePassword(currentPassword: current, newPassword: new)
             }
         }
+        //DELETE ACCOUNT
         .sheet(isPresented: $showDeleteAccount) {
             DeleteAccountSheet { password in
                 try await authService.deleteAccount(password: password)
             }
         }
+        //LOGOUT
+     
     }
     
-    @ViewBuilder
+    
+    
+    
+  //MARK: - PROFILE PIC
+    @ViewBuilder//allows me to use views wtih else statemenst
     var profileAvatar: some View {
         if let local = localProfileImage {
             Image(uiImage: local)
@@ -168,32 +187,6 @@ struct SettingsView: View {
         }
     }
     
-    // MARK: - Settings Row
-    struct SettingsRow: View {
-        let icon: String
-        let label: String
-        var value: String? = nil
-        let action: () -> Void
-        
-        var body: some View {
-            Button(action: action) {
-                HStack {
-                    Label(label, systemImage: icon)
-                        .foregroundStyle(.primary)
-                    Spacer()
-                    if let value {
-                        Text(value)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .font(.subheadline)
-                    }
-                    Image(systemName: "chevron.right")
-                        .foregroundStyle(.tertiary)
-                        .font(.caption)
-                }
-            }
-        }
-    }
     
     // MARK: - Edit Text Field Sheet
     struct EditFieldSheet: View {

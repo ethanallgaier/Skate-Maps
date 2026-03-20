@@ -15,6 +15,7 @@ struct PinInfoView: View {
     
     @ObservedObject var viewModel: MapViewModel
     
+    @State private var userRating: Int = 0
     @State private var selectedItems: [PhotosPickerItem] = []
     @State private var selectedImages: [UIImage] = []
     @State private var isUploading = false
@@ -31,6 +32,11 @@ struct PinInfoView: View {
     // Looks up the latest version of the pin from viewModel so it updates in real time
     var currentPin: PinInfo {
         viewModel.pins.first(where: { $0.id == pin.id }) ?? pin
+    }
+    // computed — looks up this user's existing rating
+    var myRating: Int {
+        guard let uid = Auth.auth().currentUser?.uid else { return 0 }
+        return currentPin.ratings[uid] ?? 0
     }
     
     var body: some View {
@@ -76,20 +82,24 @@ struct PinInfoView: View {
                                 .foregroundStyle(.secondary)
                         }
                         Divider()
- // MARK: - FAVORITE BUTTON
+                        
+ // MARK: - FAVORITE/BOOKMARK BUTTON
                         HStack {
                             Button {
                                 viewModel.toggleSave(pin: currentPin)
                             } label: {
                                 Image(systemName: viewModel.isSaved(currentPin) ? "bookmark.fill" : "bookmark")
                                     .foregroundStyle(.blue)
-                                
                             }
                             
-                         
+                            Spacer()
                             
-                            
+// MARK: - STAR RATING
+                            StarRatingView(rating: currentPin.averageRating, userRating: myRating) { stars in
+                                Task { await viewModel.ratePin(currentPin, stars: stars) }
+                            }
                         }
+                        
   // MARK: - ADD PHOTOS — only shown to the owner
                         if isOwner {
                             HStack {
@@ -138,7 +148,7 @@ struct PinInfoView: View {
             .navigationBarTitleDisplayMode(.inline)
             
             .toolbar {
- //MARK: - Delete button — only shown to the owner
+ //MARK: - DELETE BUTTON— only shown to the owner
                 if isOwner {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button(role: .destructive) {
@@ -147,20 +157,20 @@ struct PinInfoView: View {
                             Image(systemName: "trash")
                                 .foregroundStyle(.red)
                         }
+                        .confirmationDialog("Delete this pin?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+                            Button("Delete", role: .destructive) {
+                                Task {
+                                    await viewModel.deletePin(currentPin)
+                                    dismiss()
+                                }
+                            }
+                            Button("Cancel", role: .cancel) {}
+                        }
                     }
                 }
             }
             
             //DELETE BUTTON
-            .confirmationDialog("Delete this pin?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
-                Button("Delete", role: .destructive) {
-                    Task {
-                        await viewModel.deletePin(currentPin)
-                        dismiss()
-                    }
-                }
-                Button("Cancel", role: .cancel) {}
-            }
             
             //SHOW CAMERA
             .fullScreenCover(isPresented: $showCamera, onDismiss: {

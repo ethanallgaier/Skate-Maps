@@ -12,8 +12,6 @@ struct PinPreviewCard: View {
     var pin: PinInfo
     var onTap: () -> Void
     var onDismiss: () -> Void
-    
-   
 
     var body: some View {
         Button {
@@ -50,10 +48,15 @@ struct PinPreviewCard: View {
                     Text(pin.pinName)
                         .font(.headline)
                         .foregroundStyle(.primary)
-                  
-                    Label(pin.spotType.rawValue, systemImage: pin.spotType.icon)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+
+                    // Show all selected types as chips
+                    HStack(spacing: 4) {
+                        ForEach(pin.spotTypes, id: \.self) { type in
+                            Label(type.rawValue, systemImage: type.icon)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
 
                 Spacer()
@@ -68,7 +71,6 @@ struct PinPreviewCard: View {
     }
 }
 
-
 #Preview {
     let mockPin = PinInfo(
         pinName: "Hubba Hideout",
@@ -79,7 +81,7 @@ struct PinPreviewCard: View {
         createdByUID: "123",
         createdByUsername: "skater1",
         imageURls: [],
-        spotType: .rail
+        spotTypes: [.rail]
     )
     PinPreviewCard(pin: mockPin) {
         print("tapped")
@@ -87,4 +89,3 @@ struct PinPreviewCard: View {
         print("dismissed")
     }
 }
-

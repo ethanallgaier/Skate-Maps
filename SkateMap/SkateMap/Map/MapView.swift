@@ -24,7 +24,12 @@ struct MapView: View {
     
     var filteredPins: [PinInfo] {
         guard !selectedTypes.isEmpty else { return viewModel.pins }
-        return viewModel.pins.filter { selectedTypes.contains($0.spotType) }
+        
+        return viewModel.pins.filter { pin in
+            pin.spotTypes.contains { type in
+                selectedTypes.contains(type)
+            }
+        }
     }
     
     // MARK: - Main
@@ -75,6 +80,15 @@ struct MapView: View {
                 }
             }
             
+            .gesture(
+                LongPressGesture(minimumDuration: 0.5)
+                    .sequenced(before: DragGesture(minimumDistance: 0))
+                    .onEnded { value in
+                        // Get the coordinate of the map center (or you could calculate from touch location if using UIKit)
+                        pinCoordinate = currentRegion.center
+                        showAddPin = true
+                    }
+            )
             
             //for dragndrop pin
             .onMapCameraChange { context in
@@ -240,7 +254,7 @@ struct MapView: View {
                     Text("All")
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .foregroundStyle(selectedTypes.isEmpty ? .white : .primary)
+                        .foregroundStyle(selectedTypes.isEmpty ? .blue : .primary)
                         .glassEffect()
                 }
                 ForEach(SpotType.allCases, id: \.self) { type in
@@ -254,7 +268,7 @@ struct MapView: View {
                         Label(type.rawValue, systemImage: type.icon)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .foregroundStyle(selectedTypes.contains(type) ? .white : .primary)
+                            .foregroundStyle(selectedTypes.contains(type) ? .blue : .primary)
                             .glassEffect()
                     }
                 }

@@ -9,12 +9,10 @@ import SwiftUI
 import FirebaseAuth
 
 struct SavedSpotsView: View {
-    
-    @ObservedObject var viewModel: MapViewModel
 
-    
+    @ObservedObject var viewModel: MapViewModel
     @Environment(\.dismiss) var dismiss
-    
+
     var savedPins: [PinInfo] {
         viewModel.pins.filter { pin in
             guard let id = pin.id else { return false }
@@ -36,13 +34,13 @@ struct SavedSpotsView: View {
                         ForEach(savedPins) { pin in
                             NavigationLink(destination: PinInfoView(pin: pin, viewModel: viewModel)) {
                                 HStack {
-                                    Image(systemName: pin.spotType.icon)
+                                    Image(systemName: pin.spotTypes.first?.icon ?? "mappin")
                                         .font(.title2)
                                         .frame(width: 40)
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(pin.pinName)
                                             .font(.headline)
-                                        Text(pin.spotType.rawValue)
+                                        Text(pin.spotTypes.map(\.rawValue).joined(separator: ", "))
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
                                     }
@@ -61,7 +59,6 @@ struct SavedSpotsView: View {
                 }
             }
             .navigationTitle("Saved Spots")
-            
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
@@ -86,7 +83,7 @@ struct SavedSpotsView: View {
             longitude: -111.6946,
             createdByUID: "previewUID",
             createdByUsername: "Ethan",
-            spotType: .bowl
+            spotTypes: [.bowl]
         )
     ]
     viewModel.savedPinIDs = ["1"]

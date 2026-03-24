@@ -18,6 +18,10 @@ class MapViewModel: ObservableObject {
         do {
             try await dataBase.collection("pins").document(pinID).delete()
             print("Pin deleted!")
+
+            // ✅ Remove the deleted pin from savedPinIDs locally
+            savedPinIDs.removeAll { $0 == pinID }
+
         } catch {
             print("Error deleting pin: \(error)")
         }
@@ -54,7 +58,7 @@ class MapViewModel: ObservableObject {
     }
     
 //MARK: - ADD PIN TO SKATEMAPS
-    func addPin(name: String, details: String, coordinate: CLLocationCoordinate2D, username: String, images: [UIImage] = [], spotType: SpotType = .other) async {
+    func addPin(name: String, details: String, coordinate: CLLocationCoordinate2D, username: String, images: [UIImage] = [], spotTypes: [SpotType] = [.other]) async {
         guard let uid = Auth.auth().currentUser?.uid else {
             print("No user logged in!")
             return
@@ -83,7 +87,7 @@ class MapViewModel: ObservableObject {
             createdByUID: uid,
             createdByUsername: username,
             imageURls: uploadedURLs,
-            spotType: spotType
+            spotTypes: spotTypes
         )
 
         do {
@@ -227,12 +231,23 @@ class MapViewModel: ObservableObject {
     @Published var savedPinIDs: [String] = []//WHY IS THIS PUBLISHED
     
 //MARK: - LOAD USERS SAVED PINS
+    private var savedPinsListener: ListenerRegistration?
+
     func fetchSavedPins() {
         guard let uid = Auth.auth().currentUser?.uid else { return }
-        Firestore.firestore().collection("users").document(uid)
+
+        savedPinsListener?.remove()
+
+        savedPinsListener = Firestore.firestore()
+            .collection("users")
+            .document(uid)
             .addSnapshotListener { snapshot, _ in
                 let data = snapshot?.data()
-                self.savedPinIDs = data?["savedPinIDs"] as? [String] ?? []
+                let ids = data?["savedPinIDs"] as? [String] ?? []
+
+                DispatchQueue.main.async {
+                    self.savedPinIDs = ids
+                }
             }
     }
     
@@ -244,11 +259,19 @@ class MapViewModel: ObservableObject {
         let userRef = Firestore.firestore().collection("users").document(uid)
 
         if savedPinIDs.contains(pinID) {
-            // Unsave
-            userRef.setData(["savedPinIDs": FieldValue.arrayRemove([pinID])], merge: true)
+            // 🔥 REMOVE LOCALLY FIRST
+            savedPinIDs.removeAll { $0 == pinID }
+
+            userRef.setData([
+                "savedPinIDs": FieldValue.arrayRemove([pinID])
+            ], merge: true)
         } else {
-            // Save
-            userRef.setData(["savedPinIDs": FieldValue.arrayUnion([pinID])], merge: true)
+            // 🔥 ADD LOCALLY FIRST
+            savedPinIDs.append(pinID)
+
+            userRef.setData([
+                "savedPinIDs": FieldValue.arrayUnion([pinID])
+            ], merge: true)
         }
     }
     

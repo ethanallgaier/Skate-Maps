@@ -12,56 +12,57 @@ import PhotosUI
 struct AddPinView: View {
     @State private var pinName: String = ""
     @State private var pinDetails: String = ""
-    @State private var selectedItems: [PhotosPickerItem] = []//holds raw picker selections
-    @State private var selectedImages: [UIImage] = []//holds converted UIImages for preview + upload
-    @State private var isSaving: Bool = false//disables Save button and shows spinner while uploading
-    @State private  var showCamera: Bool = false
-    @State private var selectedType: SpotType = .other
-    
-    
+    @State private var selectedItems: [PhotosPickerItem] = []
+    @State private var selectedImages: [UIImage] = []
+    @State private var isSaving: Bool = false
+    @State private var showCamera: Bool = false
+    @State private var selectedTypes: Set<SpotType> = []   // ← now a Set
+
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: MapViewModel
-    
-    @Binding var  coordinate: CLLocationCoordinate2D//pin placement
-    
+
+    @Binding var coordinate: CLLocationCoordinate2D
+
     var body: some View {
         NavigationStack {
             Form {
-                
+
                 Section("Spot Info") {
                     TextField("Name", text: $pinName)
-                    
                     TextField("Spot Details", text: $pinDetails)
-                            
                 }
-                //Spot type
-                Section("Spot type") {
+
+                // Spot type — multi-select
+                Section("Spot Type") {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
-                            ForEach(SpotType.allCases, id: \.self){ type in
+                            ForEach(SpotType.allCases, id: \.self) { type in
                                 Button {
-                                    selectedType = type
+                                    // Toggle: add if absent, remove if already selected
+                                    if selectedTypes.contains(type) {
+                                        selectedTypes.remove(type)
+                                    } else {
+                                        selectedTypes.insert(type)
+                                    }
                                 } label: {
                                     Label(type.rawValue, systemImage: type.icon)
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 8)
-                                        .background(selectedType == type ? Color.black : Color.gray.opacity(0.2))
-                                        .foregroundStyle(selectedType == type ? .white : .primary)
+                                        .background(selectedTypes.contains(type) ? Color.black : Color.gray.opacity(0.2))
+                                        .foregroundStyle(selectedTypes.contains(type) ? .white : .primary)
                                         .clipShape(Capsule())
                                 }
                             }
                         }
-                        
                         .padding(.vertical, 4)
                     }
                 }
-                
+
                 Section("Photos") {
                     PhotosPicker(selection: $selectedItems, maxSelectionCount: 10, matching: .images) {
                         Label("Add Photos", systemImage: "photo.on.rectangle.angled")
                     }
                     .onChange(of: selectedItems) { _, newItems in
-                        // converts each PhotosPickerItem into a UIImage when user picks photos
                         Task {
                             selectedImages = []
                             for item in newItems {
@@ -72,17 +73,14 @@ struct AddPinView: View {
                             }
                         }
                     }
-                    
-                    
-                    // Camera
+
                     Button {
                         showCamera = true
                     } label: {
                         Label("Camera", systemImage: "camera")
                     }
                 }
-                
-                //Preview of Images
+
                 if !selectedImages.isEmpty {
                     ScrollView(.horizontal) {
                         HStack {
@@ -99,26 +97,20 @@ struct AddPinView: View {
             }
             .navigationTitle("New Spot")
             .navigationBarTitleDisplayMode(.inline)
-            
-            .fullScreenCover(isPresented: $showCamera) {//Show camera
+            .fullScreenCover(isPresented: $showCamera) {
                 CameraPicker(images: $selectedImages)
             }
-            .toolbar {//cancel Button
+            .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
- //Save Button
-                    if isSaving{
+                    if isSaving {
                         ProgressView()
                     } else {
-                        
                         Button("Create") {
-//                            guard let coordinate = locationManager.userLocation else { return }
                             isSaving = true
                             Task {
-                                // Convert picker items to UIImages HERE, right before upload
-                                // so we know they're ready
                                 var images: [UIImage] = []
                                 for item in selectedItems {
                                     if let data = try? await item.loadTransferable(type: Data.self),
@@ -132,8 +124,8 @@ struct AddPinView: View {
                                     details: pinDetails,
                                     coordinate: coordinate,
                                     username: "test",
-                                    images: images, // uses freshly converted images
-                                    spotType: selectedType
+                                    images: images,
+                                    spotTypes: Array(selectedTypes)  // ← pass the full array
                                 )
                                 isSaving = false
                                 dismiss()
@@ -143,12 +135,8 @@ struct AddPinView: View {
                 }
             }
         }
-        
     }
-        
 }
-
-
 
 #Preview {
     @Previewable @State var coordinate = CLLocationCoordinate2D(

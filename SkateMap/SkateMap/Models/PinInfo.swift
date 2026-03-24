@@ -50,8 +50,8 @@ struct PinInfo: Identifiable, Codable, Equatable{
     var createdByUID: String = ""
     var createdByUsername: String = ""
     var imageURls: [String] = []
-    var spotType: SpotType = .other
-    var ratings: [String: Int] = [:] 
+    var spotTypes: [SpotType] = [.other]
+    var ratings: [String: Int] = [:]
 
         // computed — not stored in Firestore
         var averageRating: Double {

@@ -119,20 +119,22 @@ struct PinInfoView: View {
 
                                 Spacer()
 
-                                // Star rating (interactive)
                                 StarRatingView(rating: currentPin.averageRating, userRating: myRating) { stars in
                                     Task { await viewModel.ratePin(currentPin, stars: stars) }
                                 }
+                                // Star rating (interactive)
                             }
 
                             Divider()
+                            
+                         
 
                             // MARK: Overview
                             if !currentPin.pinDetails.isEmpty {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("Overview")
                                         .font(.system(size: 18, weight: .bold))
-
+                                   
                                     Text(overviewText)
                                         .font(.system(size: 15))
                                         .foregroundColor(.secondary)
@@ -154,6 +156,24 @@ struct PinInfoView: View {
                                     }
                                 }
 
+                                Divider()
+                                
+                                Text("Spot Type")
+                                    .font(.system(size: 18, weight: .bold))
+                                HStack(spacing: 4) {
+                                    ForEach(Array(pin.spotTypes.enumerated()), id: \.element) { index, type in
+                                        Label(type.rawValue, systemImage: type.icon)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                        
+                                        // Add "+" after every item except the last
+                                        if index < pin.spotTypes.count - 1 {
+                                            Text("+")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
                                 Divider()
                             }
 

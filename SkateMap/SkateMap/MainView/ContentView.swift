@@ -18,12 +18,12 @@ struct ContentView: View {
                 Tab("Explore", systemImage: "globe") {
                     MapView(viewModel: viewModel)
                 }
-                Tab("Profile", systemImage: "figure.stand") {
+                Tab("Profile", systemImage: "person.crop.circle") {
                     ProfileView(viewModel: viewModel)
                 }
                
             }
-            .tint(.black.opacity(0.5))
+//            .tint(.red.opacity(0.5))
         
 //            .toolbarBackground(.ultraThinMaterial, for: .tabBar)
         } else {

@@ -150,7 +150,13 @@ struct AddPinView: View {
 
 
 
-//
-//#Preview {
-//    AddPinView(viewModel: MapViewModel(), locationManager: LocationManager())
-//}
+#Preview {
+    @Previewable @State var coordinate = CLLocationCoordinate2D(
+        latitude: 40.2969,
+        longitude: -111.6946
+    )
+    AddPinView(
+        viewModel: MapViewModel(),
+        coordinate: $coordinate
+    )
+}

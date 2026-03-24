@@ -108,7 +108,7 @@ struct MapView: View {
                     .presentationBackgroundInteraction(.enabled(upThrough: .medium))
                     .interactiveDismissDisabled()
             }
-            .sheet(isPresented: $showPinDetail) {
+            .fullScreenCover(isPresented: $showPinDetail) {
                 if let pin = selectedPin {
                     PinInfoView(pin: pin, viewModel: viewModel)
                 }
@@ -200,7 +200,7 @@ struct MapView: View {
     
     
     
-    @ViewBuilder//what is this
+    @ViewBuilder
     
     //MARK: - SEARCH RESULTS
     var searchResults: some View {

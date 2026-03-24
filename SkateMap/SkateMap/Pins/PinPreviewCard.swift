@@ -12,6 +12,8 @@ struct PinPreviewCard: View {
     var pin: PinInfo
     var onTap: () -> Void
     var onDismiss: () -> Void
+    
+   
 
     var body: some View {
         Button {
@@ -42,14 +44,15 @@ struct PinPreviewCard: View {
 
                 // Spot info
                 VStack(alignment: .leading, spacing: 4) {
+                    Text(pin.createdByUsername)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     Text(pin.pinName)
                         .font(.headline)
                         .foregroundStyle(.primary)
+                  
                     Label(pin.spotType.rawValue, systemImage: pin.spotType.icon)
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Text(pin.createdByUsername)
-                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
@@ -62,8 +65,6 @@ struct PinPreviewCard: View {
             .glassEffect(in: .rect(cornerRadius: 16))
             .padding(.horizontal)
         }
-       
-        
     }
 }
 

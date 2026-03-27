@@ -25,14 +25,25 @@ struct PinInfoView: View {
     @State private var showCamera = false
     @State private var showDeleteConfirm = false
 
+    @State private var isEditing = false
+    @State private var editedName = ""
+    @State private var editedDetails = ""
+    @State private var isSaving = false
+
     @Environment(\.dismiss) var dismiss
+    
+    
 
     var isOwner: Bool {
         Auth.auth().currentUser?.uid == currentPin.createdByUID
     }
 
-    var currentPin: PinInfo {
-        viewModel.pins.first(where: { $0.id == pin.id }) ?? pin
+    @State private var currentPin: PinInfo
+    
+    init(pin: PinInfo, viewModel: MapViewModel) {
+        self.pin = pin
+        self.viewModel = viewModel
+        _currentPin = State(initialValue: pin)
     }
 
     var myRating: Int {
@@ -51,45 +62,76 @@ struct PinInfoView: View {
     }
 
     var body: some View {
-        NavigationStack {
+       
             ZStack(alignment: .bottom) {
+                let _ = print("🔄 PinInfoView re-render")
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 0) {
 
-                        // MARK: Hero Carousel
-                        heroCarousel
+                        // MARK: Photos
+                        captures
 
-                        // MARK: Content
+                        // MARK: - Content
                         VStack(alignment: .leading, spacing: 20) {
 
-                            //MARK: - Title + Delete (owner only)
+                            // MARK: - Title + Edit/Delete (owner only)
                             HStack(alignment: .top) {
-                                Text(currentPin.pinName)
-                                    .font(.system(size: 26, weight: .bold))
+                                if isEditing {
+                                    TextField("Spot name", text: $editedName)
+                                        .font(.system(size: 26, weight: .bold))
+                                        .submitLabel(.done)
+                                } else {
+                                    Text(currentPin.pinName)
+                                        .font(.system(size: 26, weight: .bold))
+                                }
+
                                 Spacer()
+
                                 if isOwner {
-                                    Button(role: .destructive) {
-                                        showDeleteConfirm = true
-                                    } label: {
-                                        Image(systemName: "trash")
-                                            .font(.system(size: 20))
-                                            .foregroundColor(.red)
-                                    }
-                                    .confirmationDialog("Delete this pin?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
-                                        Button("Delete", role: .destructive) {
-                                            Task {
-                                                await viewModel.deletePin(currentPin)
-                                                dismiss()
+                                    HStack(spacing: 14) {
+                                        // Edit button
+                                        Button {
+                                            if isEditing {
+                                                // Cancel — restore original values
+                                                isEditing = false
+                                            } else {
+                                                editedName = currentPin.pinName
+                                                editedDetails = currentPin.pinDetails
+                                                isEditing = true
+                                            }
+                                        } label: {
+                                            Image(systemName: isEditing ? "xmark" : "pencil.and.outline")
+                                                .font(.system(size: 18))
+                                                .foregroundColor(.blue)
+                                                .padding()
+                                        }
+
+                                        // Delete button (hidden while editing)
+                                        if !isEditing {
+                                            Button(role: .destructive) {
+                                                showDeleteConfirm = true
+                                            } label: {
+                                                Image(systemName: "trash")
+                                                    .font(.system(size: 18))
+                                                    .foregroundColor(.red)
+                                                    .padding()
+                                            }
+                                            .confirmationDialog("Delete this pin?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+                                                Button("Delete", role: .destructive) {
+                                                    Task {
+                                                        await viewModel.deletePin(currentPin)
+                                                        dismiss()
+                                                    }
+                                                }
+                                                Button("Cancel", role: .cancel) {}
                                             }
                                         }
-                                        Button("Cancel", role: .cancel) {}
                                     }
                                 }
                             }
 
-                            // MARK: Creator + Date
+                            // MARK: - Creator + Date
                             HStack(spacing: 4) {
-                              
                                 Label(currentPin.createdByUsername, systemImage: "person.circle")
                                     .font(.system(size: 14))
                                     .foregroundColor(.secondary)
@@ -101,40 +143,46 @@ struct PinInfoView: View {
                             }
 
                             // MARK: Bookmark + Star Rating row
-                            HStack {
-                                // Save button
-                                Button {
-                                    viewModel.toggleSave(pin: currentPin)
-                                } label: {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: viewModel.isSaved(currentPin) ? "bookmark.fill" : "bookmark")
-                                        Text(viewModel.isSaved(currentPin) ? "Saved" : "Save")
-                                            .font(.system(size: 14, weight: .medium))
+                            if !isEditing {
+                                HStack {
+                                    Button {
+                                        viewModel.toggleSave(pin: currentPin)
+                                    } label: {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: viewModel.isSaved(currentPin) ? "bookmark.fill" : "bookmark")
+                                            Text(viewModel.isSaved(currentPin) ? "Saved" : "Save")
+                                                .font(.system(size: 14, weight: .medium))
+                                        }
+                                        .foregroundColor(.blue)
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 8)
+                                        .background(Color.blue.opacity(0.1), in: Capsule())
                                     }
-                                    .foregroundColor(.blue)
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 8)
-                                    .background(Color.blue.opacity(0.1), in: Capsule())
-                                }
 
-                                Spacer()
+                                    Spacer()
 
-                                StarRatingView(rating: currentPin.averageRating, userRating: myRating) { stars in
-                                    Task { await viewModel.ratePin(currentPin, stars: stars) }
+                                    StarRatingView(rating: currentPin.averageRating, userRating: myRating) { stars in
+                                        Task { await viewModel.ratePin(currentPin, stars: stars) }
+                                    }
                                 }
-                                // Star rating (interactive)
                             }
 
                             Divider()
-                            
-                         
 
-                            // MARK: Overview
-                            if !currentPin.pinDetails.isEmpty {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("Overview")
-                                        .font(.system(size: 18, weight: .bold))
-                                   
+                            // MARK: OVERVIEW
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Overview")
+                                    .font(.system(size: 18, weight: .bold))
+
+                                if isEditing {
+                                    TextEditor(text: $editedDetails)
+                                        .font(.system(size: 15))
+                                        .foregroundColor(.secondary)
+                                        .frame(minHeight: 80, maxHeight: 150)
+                                        .scrollContentBackground(.hidden)
+                                        .padding(10)
+                                        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
+                                } else if !currentPin.pinDetails.isEmpty {
                                     Text(overviewText)
                                         .font(.system(size: 15))
                                         .foregroundColor(.secondary)
@@ -155,33 +203,71 @@ struct PinInfoView: View {
                                         }
                                     }
                                 }
-
-                                Divider()
-                                
-                                Text("Spot Type")
-                                    .font(.system(size: 18, weight: .bold))
-                                HStack(spacing: 4) {
-                                    ForEach(Array(pin.spotTypes.enumerated()), id: \.element) { index, type in
-                                        Label(type.rawValue, systemImage: type.icon)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                        
-                                        // Add "+" after every item except the last
-                                        if index < pin.spotTypes.count - 1 {
-                                            Text("+")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                    }
-                                }
-                                Divider()
                             }
 
-                            // MARK: Add Photos (owner only)
+                            if !currentPin.pinDetails.isEmpty || isEditing {
+                                Divider()
+
+                                // MARK: - SPOT TYPE
+                                if !isEditing {
+                                    Text("Spot Type")
+                                        .font(.system(size: 18, weight: .bold))
+                                    HStack(spacing: 4) {
+                                        ForEach(Array(pin.spotTypes.enumerated()), id: \.element) { index, type in
+                                            Label(type.rawValue, systemImage: type.icon)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+
+                                            if index < pin.spotTypes.count - 1 {
+                                                Text("+")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                    }
+                                    Divider()
+                                }
+                            }
+
+                            // MARK: Add / Manage Photos (owner only)
                             if isOwner {
                                 VStack(alignment: .leading, spacing: 10) {
-                                    Text("Add Photos")
+                                    Text(isEditing ? "Manage Photos" : "Add Photos")
                                         .font(.system(size: 18, weight: .bold))
+
+                                    // Deletable photo thumbnails when editing
+                                    if isEditing && !currentPin.imageURls.isEmpty {
+                                        ScrollView(.horizontal, showsIndicators: false) {
+                                            HStack(spacing: 10) {
+                                                ForEach(Array(currentPin.imageURls.enumerated()), id: \.offset) { index, url in
+                                                    ZStack(alignment: .topTrailing) {
+                                                        AsyncImage(url: URL(string: url)) { image in
+                                                            image
+                                                                .resizable()
+                                                                .scaledToFill()
+                                                        } placeholder: {
+                                                            Rectangle()
+                                                                .fill(Color(.systemGray5))
+                                                                .overlay(ProgressView())
+                                                        }
+                                                        .frame(width: 90, height: 90)
+                                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                                                        Button {
+                                                            Task {
+                                                                await viewModel.deletePhoto(from: currentPin, at: index)
+                                                            }
+                                                        } label: {
+                                                            Image(systemName: "xmark.circle.fill")
+                                                                .font(.system(size: 20))
+                                                                .foregroundStyle(.white, .black.opacity(0.7))
+                                                                .padding(4)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
 
                                     HStack(spacing: 10) {
                                         PhotosPicker(selection: $selectedItems, maxSelectionCount: 10, matching: .images) {
@@ -197,16 +283,19 @@ struct PinInfoView: View {
                                             guard !newItems.isEmpty else { return }
                                             isUploading = true
                                             Task {
+                                                var images: [UIImage] = []
                                                 for item in newItems {
                                                     if let data = try? await item.loadTransferable(type: Data.self),
                                                        let image = UIImage(data: data) {
-                                                        selectedImages.append(image)
+                                                        images.append(image)
                                                     }
                                                 }
-                                                await viewModel.addPhotos(to: currentPin, images: selectedImages)
-                                                selectedItems = []
-                                                selectedImages = []
-                                                isUploading = false
+                                                await viewModel.addPhotos(to: currentPin, images: images)
+                                                await MainActor.run {
+                                                    selectedItems = []
+                                                    selectedImages = []
+                                                    isUploading = false
+                                                }
                                             }
                                         }
 
@@ -228,56 +317,82 @@ struct PinInfoView: View {
                             }
 
                             // MARK: Location Map
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("Location")
-                                    .font(.system(size: 18, weight: .bold))
+                            if !isEditing {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Text("Location")
+                                        .font(.system(size: 18, weight: .bold))
 
-                                Map(initialPosition: .region(MKCoordinateRegion(
-                                    center: currentPin.coordinate,
-                                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                                ))) {
-                                    Marker(currentPin.pinName, coordinate: currentPin.coordinate)
-                                        .tint(.red)
+                                    Map(initialPosition: .region(MKCoordinateRegion(
+                                        center: currentPin.coordinate,
+                                        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                                    ))) {
+                                        Marker(currentPin.pinName, coordinate: currentPin.coordinate)
+                                            .tint(.red)
+                                    }
+                                    .mapStyle(.hybrid)
+                                    .frame(height: 160)
+                                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                                    .disabled(true)
                                 }
-                                .mapStyle(.hybrid)
-                                .frame(height: 160)
-                                .clipShape(RoundedRectangle(cornerRadius: 14))
-                                .disabled(true)
                             }
 
-                            // Space so content clears the bottom bar
                             Spacer(minLength: 90)
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 20)
                     }
                 }
-                .ignoresSafeArea(edges: .top)
-
-                // MARK: Sticky Bottom Bar
-                bottomBar
+                .scrollDismissesKeyboard(.interactively)
+                
+                VStack {
+                    Spacer()
+                    bottomBar
+                }
+               
             }
+         
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+                print("⌨️ KEYBOARD WILL SHOW")
+            }
+
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                print("⌨️ KEYBOARD WILL HIDE")
+            }
+            .onReceive(viewModel.$pins) { pins in
+                print("📡 pins updated: \(pins.count)")
+
+                if let updated = pins.first(where: { $0.id == currentPin.id }) {
+                    print("✅ updating currentPin")
+                    currentPin = updated
+                } else {
+                    print("⚠️ currentPin NOT FOUND")
+                }
+            }
+           
+         
             .navigationBarHidden(true)
+            
             .fullScreenCover(isPresented: $showCamera, onDismiss: {
                 guard !selectedImages.isEmpty else { return }
+                let imagesToUpload = selectedImages
                 isUploading = true
                 Task {
-                    await viewModel.addPhotos(to: currentPin, images: selectedImages)
-                    selectedImages = []
-                    isUploading = false
+                    await viewModel.addPhotos(to: currentPin, images: imagesToUpload)
+                    await MainActor.run {
+                        selectedImages = []
+                        isUploading = false
+                    }
                 }
             }) {
                 CameraPicker(images: $selectedImages)
             }
-        }
+        
     }
 
-    // MARK: - Hero Carousel
-
+    // MARK: - Top Picture Bar
     @ViewBuilder
-    private var heroCarousel: some View {
+    private var captures: some View {
         ZStack(alignment: .bottom) {
-            // Images or fallback gradient
             if currentPin.imageURls.isEmpty {
                 LinearGradient(
                     colors: [Color(red: 0.12, green: 0.12, blue: 0.16), Color(red: 0.22, green: 0.22, blue: 0.28)],
@@ -308,15 +423,13 @@ struct PinInfoView: View {
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
 
-            // Bottom gradient fade on image
             LinearGradient(
                 colors: [.clear, .black.opacity(0.25)],
                 startPoint: .center,
                 endPoint: .bottom
             )
-            .allowsHitTesting(false)
+//            .allowsHitTesting(false)
 
-            // Dismiss + Heart buttons
             VStack {
                 HStack {
                     Button { dismiss() } label: {
@@ -342,7 +455,6 @@ struct PinInfoView: View {
                 Spacer()
             }
 
-            // Page indicator dots
             if currentPin.imageURls.count > 1 {
                 HStack(spacing: 6) {
                     ForEach(0..<currentPin.imageURls.count, id: \.self) { index in
@@ -358,36 +470,54 @@ struct PinInfoView: View {
         .frame(height: 300)
     }
 
-    // MARK: - Bottom Bar (mirrors the Destination detail style)
+    // MARK: - Bottom Bar
 
     private var bottomBar: some View {
         HStack {
-            // Rating on the left (mirrors "$35 /person")
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(alignment: .lastTextBaseline, spacing: 4) {
-                    Image(systemName: "star.fill")
-                        .foregroundColor(.blue)
-                        .font(.system(size: 18))
-                    Text(String(format: "%.1f", currentPin.averageRating))
-                        .font(.system(size: 26, weight: .bold))
+            if isEditing {
+                // Save button
+                Button {
+                    isSaving = true
+                    Task {
+                        await viewModel.updatePin(currentPin, name: editedName, details: editedDetails)
+                        isSaving = false
+                        isEditing = false
+                    }
+                } label: {
+                    Label(isSaving ? "Saving…" : "Save Changes", systemImage: isSaving ? "hourglass" : "checkmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.blue, in: Capsule())
                 }
-                Text("rating")
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
-            }
+                .disabled(isSaving || editedName.trimmingCharacters(in: .whitespaces).isEmpty)
+            } else {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(alignment: .lastTextBaseline, spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .foregroundColor(.blue)
+                            .font(.system(size: 18))
+                        Text(String(format: "%.1f", currentPin.averageRating))
+                            .font(.system(size: 26, weight: .bold))
+                    }
+                    Text("rating")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                }
 
-            Spacer()
+                Spacer()
 
-            // Get Directions — capsule button matching "Book Now"
-            Button {
-                openInMaps()
-            } label: {
-                Label("Get Directions", systemImage: "map.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 28)
-                    .padding(.vertical, 16)
-                    .background(Color.blue, in: Capsule())
+                Button {
+                    openInMaps()
+                } label: {
+                    Label("Get Directions", systemImage: "map.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 28)
+                        .padding(.vertical, 16)
+                        .background(Color.blue, in: Capsule())
+                }
             }
         }
         .padding(.horizontal, 24)
@@ -396,6 +526,7 @@ struct PinInfoView: View {
             .ultraThinMaterial
                 .shadow(.drop(color: .black.opacity(0.08), radius: 12, y: -4))
         )
+        .animation(.easeInOut(duration: 0.2), value: isEditing)
     }
 
     // MARK: - Helpers
@@ -410,22 +541,18 @@ struct PinInfoView: View {
 
 // MARK: - Preview
 
-#Preview {
-    let mockPin = PinInfo(
-        id: "1",
-        pinName: "Orem Skatepark",
-        pinDetails: "Super smooth ledges and a nice bowl. Great spot for all skill levels with freshly poured concrete and good lighting at night.",
-        latitude: 40.2969,
-        longitude: -111.6946,
-        createdByUID: "test",
-        createdByUsername: "Ethan",
-        imageURls: [
-            "https://picsum.photos/400"
-        ]
-    )
-
-    PinInfoView(
-        pin: mockPin,
-        viewModel: MapViewModel()
-    )
-}
+//#Preview {
+//    let mockPin = PinInfo(
+//        id: "1",
+//        pinName: "Orem Skatepark",
+//        pinDetails: "Super smooth ledges and a nice bowl.",
+//        latitude: 40.2969,
+//        longitude: -111.6946,
+//        createdByUID: "test",
+//        createdByUsername: "Ethan",
+//        imageURls: [],
+//        spotTypes: [.ledge, .bowl]
+//    )
+//
+//    PinInfoView(pin: mockPin, viewModel: MapViewModel())
+//}

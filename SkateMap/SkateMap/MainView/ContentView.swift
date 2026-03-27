@@ -23,7 +23,7 @@ struct ContentView: View {
                 }
                
             }
-//            .tint(.red.opacity(0.5))
+            .tint(.red.opacity(0.9))
         
 //            .toolbarBackground(.ultraThinMaterial, for: .tabBar)
         } else {

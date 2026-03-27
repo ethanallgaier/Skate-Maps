@@ -150,7 +150,7 @@ class MapViewModel: ObservableObject {
         return CLLocationCoordinate2D(latitude: avgLat, longitude: avgLon)
     }
     
-//MARK: - COMBINED PIN UI
+//MARK: - COMBINED(MULTIPLE) PIN UI
     struct ClusterBubble: View {
         let count: Int
         @State private var scale: CGFloat = 0.0
@@ -179,7 +179,7 @@ class MapViewModel: ObservableObject {
 
         var body: some View {
             Button(action: action) {
-                Image(systemName: "mappin")
+                Image(systemName: "skateboard")
                     .frame(width: 5, height: 15)
                     .foregroundStyle(.white)
             }
@@ -297,5 +297,23 @@ class MapViewModel: ObservableObject {
         } catch {
             print("❌ Error rating pin: \(error)")
         }
+    }
+    //MARK: -   UPDATE/EDIT
+    func updatePin(_ pin: PinInfo, name: String, details: String) async {
+        guard let id = pin.id else { return }
+        try? await Firestore.firestore().collection("pins").document(id).updateData([
+            "pinName": name,
+            "pinDetails": details
+        ])
+    }
+    //MARK: - DELETE PHOTO
+    func deletePhoto(from pin: PinInfo, at index: Int) async {
+        guard let id = pin.id else { return }
+        var urls = pin.imageURls
+        // Optionally delete from Storage here
+        urls.remove(at: index)
+        try? await Firestore.firestore().collection("pins").document(id).updateData([
+            "imageURls": urls
+        ])
     }
 }

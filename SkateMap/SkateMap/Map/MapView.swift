@@ -17,7 +17,6 @@ struct MapView: View {
     
     @State private var ignoreNextCameraChange = false
     
-    
     //track the camera
     @State private var position: MapCameraPosition = .automatic
     @State private var currentRegion: MKCoordinateRegion = MKCoordinateRegion()
@@ -35,11 +34,11 @@ struct MapView: View {
     // MARK: - Main
     var body: some View {
         ZStack(alignment: .top) {
-            // MARK: -  MAP
             
+            // MARK: -  MAP
             Map(position: $cameraPosition) {
                 UserAnnotation()//forogt what this is
-                
+                //Each pin
                 ForEach(viewModel.clusteredPins(for: currentRegion, from: filteredPins), id: \.first?.id) { cluster in
                     if cluster.count == 1, let pin = cluster.first {
                         // SINGLE PIN

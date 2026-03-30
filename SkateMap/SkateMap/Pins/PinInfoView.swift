@@ -28,6 +28,7 @@ struct PinInfoView: View {
     @State private var isEditing = false
     @State private var editedName = ""
     @State private var editedDetails = ""
+    @State private var editedSpotTypes: Set<SpotType> = []
     @State private var isSaving = false
 
     @Environment(\.dismiss) var dismiss
@@ -64,8 +65,6 @@ struct PinInfoView: View {
     var body: some View {
        
             ZStack(alignment: .bottom) {
-                let _ = print("📸 captures re-render — imageURLs: \(currentPin.imageURls.count), frame will be 300")
-             
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 0) {
 
@@ -79,11 +78,11 @@ struct PinInfoView: View {
                             HStack(alignment: .top) {
                                 if isEditing {
                                     TextField("Spot name", text: $editedName)
-                                        .font(.system(size: 26, weight: .bold))
+                                        .font(.system(size: 34, weight: .bold))
                                         .submitLabel(.done)
                                 } else {
                                     Text(currentPin.pinName)
-                                        .font(.system(size: 26, weight: .bold))
+                                        .font(.system(size: 34, weight: .bold))
                                 }
 
                                 Spacer()
@@ -98,6 +97,7 @@ struct PinInfoView: View {
                                             } else {
                                                 editedName = currentPin.pinName
                                                 editedDetails = currentPin.pinDetails
+                                                editedSpotTypes = Set(currentPin.spotTypes)
                                                 isEditing = true
                                             }
                                         } label: {
@@ -208,27 +208,50 @@ struct PinInfoView: View {
 
                             if !currentPin.pinDetails.isEmpty || isEditing {
                                 Divider()
+                            }
 
-                                // MARK: - SPOT TYPE
-                                if !isEditing {
-                                    Text("Spot Type")
-                                        .font(.system(size: 18, weight: .bold))
-                                    HStack(spacing: 4) {
-                                        ForEach(Array(pin.spotTypes.enumerated()), id: \.element) { index, type in
-                                            Label(type.rawValue, systemImage: type.icon)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
+                            // MARK: - SPOT TYPE
+                            Text("Spot Type")
+                                .font(.system(size: 18, weight: .bold))
 
-                                            if index < pin.spotTypes.count - 1 {
-                                                Text("+")
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
+                            if isEditing {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        ForEach(SpotType.allCases, id: \.self) { type in
+                                            Button {
+                                                if editedSpotTypes.contains(type) {
+                                                    editedSpotTypes.remove(type)
+                                                } else {
+                                                    editedSpotTypes.insert(type)
+                                                }
+                                            } label: {
+                                                Label(type.rawValue, systemImage: type.icon)
+                                                    .font(.system(size: 13, weight: .medium))
+                                                    .padding(.horizontal, 12)
+                                                    .padding(.vertical, 8)
+                                                    .background(editedSpotTypes.contains(type) ? Color.blue : Color.gray.opacity(0.2))
+                                                    .foregroundStyle(editedSpotTypes.contains(type) ? .white : .primary)
+                                                    .clipShape(Capsule())
                                             }
                                         }
                                     }
-                                    Divider()
+                                }
+                            } else {
+                                HStack(spacing: 4) {
+                                    ForEach(Array(currentPin.spotTypes.enumerated()), id: \.element) { index, type in
+                                        Label(type.rawValue, systemImage: type.icon)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+
+                                        if index < currentPin.spotTypes.count - 1 {
+                                            Text("+")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
                                 }
                             }
+                            Divider()
 
                             // MARK: Add / Manage Photos (owner only)
                             if isOwner {
@@ -337,7 +360,7 @@ struct PinInfoView: View {
                                 }
                             }
 
-                            Spacer(minLength: 90)
+                            Spacer(minLength: 20)
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 20)
@@ -345,30 +368,16 @@ struct PinInfoView: View {
                 }
                 
                 .scrollDismissesKeyboard(.interactively)
-                .ignoresSafeArea(.keyboard)
-                
-                VStack {
-                    Spacer()
+                .safeAreaInset(edge: .bottom) {
                     bottomBar
-                    let _ = print("📌 bottomBar container re-render")
                 }
-               
             }
-            .ignoresSafeArea(.keyboard)
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { notif in
-                    let frame = notif.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
-                    print("⌨️ KEYBOARD WILL SHOW — frame: \(String(describing: frame))")
-                }
-                .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
-                    print("⌨️ KEYBOARD WILL HIDE")
-                }
-                .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
-                    print("⌨️ KEYBOARD DID SHOW")
-                }
-           
-         
             .navigationBarHidden(true)
-            
+            .onChange(of: viewModel.pins) { _, newPins in
+                if let updated = newPins.first(where: { $0.id == currentPin.id }) {
+                    currentPin = updated
+                }
+            }
             .fullScreenCover(isPresented: $showCamera, onDismiss: {
                 guard !selectedImages.isEmpty else { return }
                 let imagesToUpload = selectedImages
@@ -471,13 +480,12 @@ struct PinInfoView: View {
 
     private var bottomBar: some View {
         HStack {
-            let _ = print("📌 bottomBar re-render — isEditing: \(isEditing), isSaving: \(isSaving)")
             if isEditing {
                 // Save button
                 Button {
                     isSaving = true
                     Task {
-                        await viewModel.updatePin(currentPin, name: editedName, details: editedDetails)
+                        await viewModel.updatePin(currentPin, name: editedName, details: editedDetails, spotTypes: Array(editedSpotTypes))
                         isSaving = false
                         isEditing = false
                     }

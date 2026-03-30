@@ -299,11 +299,12 @@ class MapViewModel: ObservableObject {
         }
     }
     //MARK: -   UPDATE/EDIT
-    func updatePin(_ pin: PinInfo, name: String, details: String) async {
+    func updatePin(_ pin: PinInfo, name: String, details: String, spotTypes: [SpotType]) async {
         guard let id = pin.id else { return }
         try? await Firestore.firestore().collection("pins").document(id).updateData([
             "pinName": name,
-            "pinDetails": details
+            "pinDetails": details,
+            "spotTypes": spotTypes.map { $0.rawValue }
         ])
     }
     //MARK: - DELETE PHOTO

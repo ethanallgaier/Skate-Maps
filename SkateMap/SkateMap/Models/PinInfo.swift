@@ -14,7 +14,7 @@ import CoreLocation
 //Need to kno what these mean
 enum SpotType: String, Codable, CaseIterable {
     case rail = "Rail"
-    case stairs = "Stairs"
+    case stairs = "Stair"
     case ledge = "Ledge"
     case bowl = "Bowl"
     case manualPad = "Manual Pad"

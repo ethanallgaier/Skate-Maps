@@ -64,7 +64,8 @@ struct PinInfoView: View {
     var body: some View {
        
             ZStack(alignment: .bottom) {
-                let _ = print("🔄 PinInfoView re-render")
+                let _ = print("📸 captures re-render — imageURLs: \(currentPin.imageURls.count), frame will be 300")
+             
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 0) {
 
@@ -342,33 +343,28 @@ struct PinInfoView: View {
                         .padding(.top, 20)
                     }
                 }
-                .ignoresSafeArea(.keyboard)
+                
                 .scrollDismissesKeyboard(.interactively)
+                .ignoresSafeArea(.keyboard)
                 
                 VStack {
                     Spacer()
                     bottomBar
+                    let _ = print("📌 bottomBar container re-render")
                 }
                
             }
-         
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-                print("⌨️ KEYBOARD WILL SHOW")
-            }
-
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
-                print("⌨️ KEYBOARD WILL HIDE")
-            }
-            .onReceive(viewModel.$pins) { pins in
-                print("📡 pins updated: \(pins.count)")
-
-                if let updated = pins.first(where: { $0.id == currentPin.id }) {
-                    print("✅ updating currentPin")
-                    currentPin = updated
-                } else {
-                    print("⚠️ currentPin NOT FOUND")
+            .ignoresSafeArea(.keyboard)
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { notif in
+                    let frame = notif.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect
+                    print("⌨️ KEYBOARD WILL SHOW — frame: \(String(describing: frame))")
                 }
-            }
+                .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                    print("⌨️ KEYBOARD WILL HIDE")
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
+                    print("⌨️ KEYBOARD DID SHOW")
+                }
            
          
             .navigationBarHidden(true)
@@ -475,6 +471,7 @@ struct PinInfoView: View {
 
     private var bottomBar: some View {
         HStack {
+            let _ = print("📌 bottomBar re-render — isEditing: \(isEditing), isSaving: \(isSaving)")
             if isEditing {
                 // Save button
                 Button {

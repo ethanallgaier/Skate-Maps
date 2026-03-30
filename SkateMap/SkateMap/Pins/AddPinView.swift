@@ -17,7 +17,9 @@ struct AddPinView: View {
     @State private var isSaving: Bool = false
     @State private var showCamera: Bool = false
     @State private var selectedTypes: Set<SpotType> = []   // ← now a Set
-
+    
+    @Environment(AuthService.self) var authService
+    
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: MapViewModel
 
@@ -123,7 +125,7 @@ struct AddPinView: View {
                                     name: pinName,
                                     details: pinDetails,
                                     coordinate: coordinate,
-                                    username: "test",
+                                    username: authService.currentUser?.username ?? "Unknown",
                                     images: images,
                                     spotTypes: Array(selectedTypes)  // ← pass the full array
                                 )

@@ -342,6 +342,7 @@ struct PinInfoView: View {
                         .padding(.top, 20)
                     }
                 }
+                .ignoresSafeArea(.keyboard)
                 .scrollDismissesKeyboard(.interactively)
                 
                 VStack {
@@ -428,7 +429,7 @@ struct PinInfoView: View {
                 startPoint: .center,
                 endPoint: .bottom
             )
-//            .allowsHitTesting(false)
+            .allowsHitTesting(false)
 
             VStack {
                 HStack {

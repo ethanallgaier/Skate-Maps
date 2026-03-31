@@ -11,19 +11,20 @@ struct ContentView: View {
     
     @Environment(AuthService.self) var authService// see if user has logged in
     @StateObject private var viewModel = MapViewModel()
+    @StateObject private var locationManager = LocationManager()
     
     var body: some View {
         if authService.isLoggedIn {
             TabView {
                 Tab("Explore", systemImage: "globe") {
-                    MapView(viewModel: viewModel)
+                    MapView(viewModel: viewModel, locationManager: locationManager)
                 }
                 Tab("Profile", systemImage: "person.crop.circle") {
                     ProfileView(viewModel: viewModel)
                 }
                
             }
-            .tint(.red.opacity(0.8))
+            .tint(.black.opacity(0.8))
         
 //            .toolbarBackground(.ultraThinMaterial, for: .tabBar)
         } else {

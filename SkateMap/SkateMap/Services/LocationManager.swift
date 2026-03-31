@@ -28,6 +28,14 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
             userLocation = locations.first?.coordinate
         }
+
+    /// Returns distance in meters from the user to a given coordinate.
+    func distance(to coordinate: CLLocationCoordinate2D) -> Double? {
+        guard let userLocation else { return nil }
+        let userCL = CLLocation(latitude: userLocation.latitude, longitude: userLocation.longitude)
+        let targetCL = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        return userCL.distance(from: targetCL)
+    }
 }
 
 

@@ -24,6 +24,7 @@ struct AddPinView: View {
     @State private var isSaving: Bool = false
     @State private var showCamera: Bool = false
     @State private var selectedTypes: Set<SpotType> = []
+    @State private var selectedRiskLevel: RiskLevel = .low
     @State private var coordinate: CLLocationCoordinate2D?
     @State private var locationName: String?
     @State private var showLocationPicker = false
@@ -94,6 +95,29 @@ struct AddPinView: View {
                             }
                         }
                         .padding(.vertical, 4)
+                    }
+                }
+
+                // Risk level — segmented picker
+                Section("Risk Level") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("How likely are you to get kicked out?")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Picker("Risk", selection: $selectedRiskLevel) {
+                            ForEach(RiskLevel.allCases, id: \.self) { level in
+                                Text(level.label).tag(level)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        HStack {
+                            Image(systemName: selectedRiskLevel.icon)
+                            Text(selectedRiskLevel.label)
+                                .font(.subheadline.weight(.medium))
+                        }
+                        .foregroundStyle(selectedRiskLevel.color)
                     }
                 }
 
@@ -182,7 +206,8 @@ struct AddPinView: View {
                                     coordinate: coordinate!,
                                     username: authService.currentUser?.username ?? "Unknown",
                                     images: images,
-                                    spotTypes: Array(selectedTypes)
+                                    spotTypes: Array(selectedTypes),
+                                    riskLevel: selectedRiskLevel
                                 )
                                 isSaving = false
                                 dismiss()

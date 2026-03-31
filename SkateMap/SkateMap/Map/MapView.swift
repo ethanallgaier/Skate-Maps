@@ -6,13 +6,14 @@ struct MapView: View {
     // MARK: - State
     
     @ObservedObject var viewModel: MapViewModel
+    @ObservedObject var locationManager: LocationManager
     @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
-    @State private var locationManager = LocationManager()
     @State private var selectedPin: PinInfo?
     @State private var showAddPin = false
     @State private var showPinDetail = false
     @State private var selectedTypes: Set<SpotType> = []
     @State private var searchText = ""
+    @State private var showFilters = false
     
     @Namespace private var pinTransition
     @State private var ignoreNextCameraChange = false
@@ -106,12 +107,19 @@ struct MapView: View {
             
             
             // MARK: TOP FEATURES
-            VStack(spacing: 8) {
+            VStack(spacing: 0) {
                 searchBar
                 searchResults
+
                 categoryChips
+                    .padding(.top, 8)
+                    .offset(y: showFilters ? 0 : -50)
+                    .opacity(showFilters ? 1 : 0)
+                    .clipped()
+                    .frame(height: showFilters ? nil : 0, alignment: .top)
             }
             .padding(.top, 5)
+            .animation(.smooth(duration: 0.3), value: showFilters)
             
             // MARK: SIDE FEATURES
             ZStack(alignment: .bottomTrailing) {
@@ -149,29 +157,45 @@ struct MapView: View {
     
     // MARK: - SEARCH BAR
     var searchBar: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(Color(.placeholderText))
-            TextField("Search city or place...", text: $searchText)
-                .onChange(of: searchText) { _, newValue in
-                    if newValue.isEmpty {
+        HStack(spacing: 10) {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(Color(.placeholderText))
+                TextField("Search city or place...", text: $searchText)
+                    .onChange(of: searchText) { _, newValue in
+                        if newValue.isEmpty {
+                            viewModel.searchResults = []
+                        } else {
+                            viewModel.searchLocation(query: newValue)
+                        }
+                    }
+                if !searchText.isEmpty {
+                    Button {
+                        searchText = ""
                         viewModel.searchResults = []
-                    } else {
-                        viewModel.searchLocation(query: newValue)
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
                     }
                 }
-            if !searchText.isEmpty {
-                Button {
-                    searchText = ""
-                    viewModel.searchResults = []
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
-                }
             }
+            .padding(10)
+            .glassEffect()
+
+            // Filter toggle
+            Button {
+                showFilters.toggle()
+            } label: {
+                Image(systemName: showFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                    .font(.system(size: 18))
+                    .foregroundStyle(!selectedTypes.isEmpty ? .red : .white)
+                    .padding(10)
+                    .contentShape(Rectangle())
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .buttonStyle(.plain)
+            .glassEffect()
         }
-        .padding(10)
-        .glassEffect()
         .padding(.horizontal)
     }
     

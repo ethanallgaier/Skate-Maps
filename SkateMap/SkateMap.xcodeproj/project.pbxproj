@@ -7,12 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		05A777572F7C230500AAC288 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 05A777562F7C230500AAC288 /* Assets.xcassets */; };
 		05B9AB842F5732A600531E6D /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 05B9AB832F5732A600531E6D /* FirebaseFirestore */; };
 		05B9AB862F5732FA00531E6D /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 05B9AB852F5732FA00531E6D /* FirebaseAuth */; };
 		05B9AB882F57331E00531E6D /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 05B9AB872F57331E00531E6D /* FirebaseStorage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		05A777562F7C230500AAC288 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		05B9AB532F55EB5900531E6D /* SkateMap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SkateMap.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -54,6 +56,7 @@
 		05B9AB4A2F55EB5900531E6D = {
 			isa = PBXGroup;
 			children = (
+				05A777562F7C230500AAC288 /* Assets.xcassets */,
 				05B9AB552F55EB5900531E6D /* SkateMap */,
 				05B9AB822F5732A600531E6D /* Frameworks */,
 				05B9AB542F55EB5900531E6D /* Products */,
@@ -145,6 +148,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				05A777572F7C230500AAC288 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

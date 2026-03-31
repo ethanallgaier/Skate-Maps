@@ -58,7 +58,7 @@ class MapViewModel: ObservableObject {
     }
     
 //MARK: - ADD PIN TO SKATEMAPS
-    func addPin(name: String, details: String, coordinate: CLLocationCoordinate2D, username: String, images: [UIImage] = [], spotTypes: [SpotType] = [.other]) async {
+    func addPin(name: String, details: String, coordinate: CLLocationCoordinate2D, username: String, images: [UIImage] = [], spotTypes: [SpotType] = [.other], riskLevel: RiskLevel = .low) async {
         guard let uid = Auth.auth().currentUser?.uid else {
             print("No user logged in!")
             return
@@ -87,7 +87,8 @@ class MapViewModel: ObservableObject {
             createdByUID: uid,
             createdByUsername: username,
             imageURls: uploadedURLs,
-            spotTypes: spotTypes
+            spotTypes: spotTypes,
+            riskLevel: riskLevel
         )
 
         do {
@@ -200,28 +201,14 @@ class MapViewModel: ObservableObject {
         var body: some View {
             ZStack {
                 
-                Circle()
-                    .frame(width: 80, height: 80)
-                    .opacity(0.6)
+//                Circle()
+//                    .frame(width: 80, height: 80)
+//                    .opacity(0.6)
                 
-                // TEXT AROUND CIRCLE
-//                ForEach(Array(text.enumerated()), id: \.offset) { index, letter in
-//                    Text(String(letter))
-//                        .font(.caption2)
-//                        .bold()
-//                        .foregroundStyle(.black)
-//                        .position(x: 40, y: 40)
-//                        .offset(y: -35)
-//                        .rotationEffect(.degrees(Double(index) / Double(text.count) * 300))
-//                }
-                
-                // CENTER PIN
-//                Image(systemName: "figure.mixed.cardio")
-//                    .foregroundStyle(.red)
-//                    .shadow(radius: 4)
+
                 Text("X")
                     .bold()
-                    .foregroundStyle(.black)
+                    .foregroundStyle(.red)
             }
             .frame(width: 80, height: 80)
         }
@@ -299,12 +286,13 @@ class MapViewModel: ObservableObject {
         }
     }
     //MARK: -   UPDATE/EDIT
-    func updatePin(_ pin: PinInfo, name: String, details: String, spotTypes: [SpotType]) async {
+    func updatePin(_ pin: PinInfo, name: String, details: String, spotTypes: [SpotType], riskLevel: RiskLevel) async {
         guard let id = pin.id else { return }
         try? await Firestore.firestore().collection("pins").document(id).updateData([
             "pinName": name,
             "pinDetails": details,
-            "spotTypes": spotTypes.map { $0.rawValue }
+            "spotTypes": spotTypes.map { $0.rawValue },
+            "riskLevel": riskLevel.rawValue
         ])
     }
     //MARK: - DELETE PHOTO

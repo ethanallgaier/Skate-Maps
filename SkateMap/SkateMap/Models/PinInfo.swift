@@ -8,10 +8,41 @@
 import Foundation
 import FirebaseFirestore
 import CoreLocation
+import SwiftUI
 
 //What is @DocumentID?
 
 //Need to kno what these mean
+enum RiskLevel: Int, Codable, CaseIterable {
+    case low = 1
+    case medium = 2
+    case high = 3
+
+    var label: String {
+        switch self {
+        case .low:    return "Low"
+        case .medium: return "Medium"
+        case .high:   return "High"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .low:    return "shield.checkered"
+        case .medium: return "exclamationmark.triangle"
+        case .high:   return "light.beacon.max"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .low:    return .green
+        case .medium: return .yellow
+        case .high:   return .red
+        }
+    }
+}
+
 enum SpotType: String, Codable, CaseIterable {
     case rail = "Rail"
     case stairs = "Stair"
@@ -51,6 +82,7 @@ struct PinInfo: Identifiable, Codable, Equatable{
     var createdByUsername: String = ""
     var imageURls: [String] = []
     var spotTypes: [SpotType] = [.other]
+    var riskLevel: RiskLevel = .low
     var ratings: [String: Int] = [:]
 
         // computed — not stored in Firestore

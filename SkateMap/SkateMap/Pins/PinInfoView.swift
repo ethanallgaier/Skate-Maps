@@ -29,6 +29,7 @@ struct PinInfoView: View {
     @State private var editedName = ""
     @State private var editedDetails = ""
     @State private var editedSpotTypes: Set<SpotType> = []
+    @State private var editedRiskLevel: RiskLevel = .low
     @State private var isSaving = false
 
     @Environment(\.dismiss) var dismiss
@@ -98,6 +99,7 @@ struct PinInfoView: View {
                                                 editedName = currentPin.pinName
                                                 editedDetails = currentPin.pinDetails
                                                 editedSpotTypes = Set(currentPin.spotTypes)
+                                                editedRiskLevel = currentPin.riskLevel
                                                 isEditing = true
                                             }
                                         } label: {
@@ -251,6 +253,41 @@ struct PinInfoView: View {
                                     }
                                 }
                             }
+                            Divider()
+
+                            // MARK: - RISK LEVEL
+                            Text("Risk Level")
+                                .font(.system(size: 18, weight: .bold))
+
+                            if isEditing {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("How likely are you to get kicked out?")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+
+                                    Picker("Risk", selection: $editedRiskLevel) {
+                                        ForEach(RiskLevel.allCases, id: \.self) { level in
+                                            Text(level.label).tag(level)
+                                        }
+                                    }
+                                    .pickerStyle(.segmented)
+
+                                    HStack {
+                                        Image(systemName: editedRiskLevel.icon)
+                                        Text(editedRiskLevel.label)
+                                            .font(.subheadline.weight(.medium))
+                                    }
+                                    .foregroundStyle(editedRiskLevel.color)
+                                }
+                            } else {
+                                HStack(spacing: 6) {
+                                    Image(systemName: currentPin.riskLevel.icon)
+                                    Text(currentPin.riskLevel.label)
+                                        .font(.subheadline.weight(.medium))
+                                }
+                                .foregroundStyle(currentPin.riskLevel.color)
+                            }
+
                             Divider()
 
                             // MARK: Add / Manage Photos (owner only)
@@ -485,7 +522,7 @@ struct PinInfoView: View {
                 Button {
                     isSaving = true
                     Task {
-                        await viewModel.updatePin(currentPin, name: editedName, details: editedDetails, spotTypes: Array(editedSpotTypes))
+                        await viewModel.updatePin(currentPin, name: editedName, details: editedDetails, spotTypes: Array(editedSpotTypes), riskLevel: editedRiskLevel)
                         isSaving = false
                         isEditing = false
                     }

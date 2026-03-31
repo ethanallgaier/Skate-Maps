@@ -49,13 +49,26 @@ struct PinPreviewCard: View {
                         .font(.headline)
                         .foregroundStyle(.primary)
 
-                    // Show all selected types as chips
-                    HStack(spacing: 4) {
-                        ForEach(pin.spotTypes, id: \.self) { type in
-                            Label(type.rawValue, systemImage: type.icon)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                    HStack(spacing: 8) {
+                        // Spot types
+//                        HStack(spacing: 4) {
+//                            ForEach(pin.spotTypes, id: \.self) { type in
+//                                Label(type.rawValue, systemImage: type.icon)
+//                                    .font(.caption)
+//                                    .foregroundStyle(.secondary)
+//                            }
+//                        }
+
+                        // Risk badge
+                        HStack(spacing: 3) {
+                            Image(systemName: pin.riskLevel.icon)
+                            Text(pin.riskLevel.label)
                         }
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(pin.riskLevel.color)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(pin.riskLevel.color.opacity(0.15), in: Capsule())
                     }
                 }
 

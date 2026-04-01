@@ -43,6 +43,36 @@ enum RiskLevel: Int, Codable, CaseIterable {
     }
 }
 
+enum DifficultyLevel: Int, Codable, CaseIterable {
+    case beginner = 1
+    case intermediate = 2
+    case advanced = 3
+
+    var label: String {
+        switch self {
+        case .beginner:     return "Beginner"
+        case .intermediate: return "Intermediate"
+        case .advanced:     return "Advanced"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .beginner:     return "figure.walk"
+        case .intermediate: return "figure.run"
+        case .advanced:     return "figure.snowboarding"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .beginner:     return .blue
+        case .intermediate: return .purple
+        case .advanced:     return .orange
+        }
+    }
+}
+
 enum SpotType: String, Codable, CaseIterable {
     case rail = "Rail"
     case stairs = "Stair"
@@ -83,6 +113,7 @@ struct PinInfo: Identifiable, Codable, Equatable{
     var imageURls: [String] = []
     var spotTypes: [SpotType] = [.other]
     var riskLevel: RiskLevel = .low
+    var difficultyLevel: DifficultyLevel = .beginner
     var ratings: [String: Int] = [:]
 
         // computed — not stored in Firestore

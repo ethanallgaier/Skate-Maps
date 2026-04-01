@@ -148,10 +148,3 @@ private extension View {
     NavigationStack { SignUpView() }
         .environment(AuthService())
 }
-
-#Preview {
-    NavigationStack {
-        SignUpView()
-    }
-    .environment(AuthService())
-}

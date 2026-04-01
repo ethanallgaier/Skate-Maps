@@ -12,6 +12,50 @@ class MapViewModel: ObservableObject {
 
     @Published var pins: [PinInfo] = []
 
+    // MARK: - Username Cache (live lookup by UID)
+    @Published var usernameCache: [String: String] = [:]
+
+    func username(for uid: String) -> String {
+        if let cached = usernameCache[uid] {
+            return cached
+        }
+        // Kick off a fetch if we haven't yet
+        Task { await fetchUsername(for: uid) }
+        return "..."
+    }
+
+    private func fetchUsername(for uid: String) async {
+        // Don't re-fetch if already cached
+        guard usernameCache[uid] == nil else { return }
+        do {
+            let doc = try await dataBase.collection("users").document(uid).getDocument()
+            let name = doc.data()?["username"] as? String ?? "Unknown"
+            await MainActor.run {
+                self.usernameCache[uid] = name
+            }
+        } catch {
+            print("Error fetching username for \(uid): \(error)")
+        }
+    }
+
+    // MARK: - Report Pin
+    func reportPin(_ pin: PinInfo, reason: String) async {
+        guard let pinID = pin.id,
+              let uid = Auth.auth().currentUser?.uid else { return }
+        let report: [String: Any] = [
+            "pinID": pinID,
+            "reportedBy": uid,
+            "reason": reason,
+            "timestamp": Timestamp()
+        ]
+        do {
+            try await dataBase.collection("reports").addDocument(data: report)
+            print("Report submitted for pin \(pinID)")
+        } catch {
+            print("Error reporting pin: \(error)")
+        }
+    }
+
 //MARK: - DELETE FUCNTION
     func deletePin(_ pin: PinInfo) async {
         guard let pinID = pin.id else { return }
@@ -58,7 +102,7 @@ class MapViewModel: ObservableObject {
     }
     
 //MARK: - ADD PIN TO SKATEMAPS
-    func addPin(name: String, details: String, coordinate: CLLocationCoordinate2D, username: String, images: [UIImage] = [], spotTypes: [SpotType] = [.other], riskLevel: RiskLevel = .low) async {
+    func addPin(name: String, details: String, coordinate: CLLocationCoordinate2D, username: String, images: [UIImage] = [], spotTypes: [SpotType] = [.other], riskLevel: RiskLevel = .low, difficultyLevel: DifficultyLevel = .beginner) async {
         guard let uid = Auth.auth().currentUser?.uid else {
             print("No user logged in!")
             return
@@ -88,7 +132,8 @@ class MapViewModel: ObservableObject {
             createdByUsername: username,
             imageURls: uploadedURLs,
             spotTypes: spotTypes,
-            riskLevel: riskLevel
+            riskLevel: riskLevel,
+            difficultyLevel: difficultyLevel
         )
 
         do {
@@ -151,7 +196,7 @@ class MapViewModel: ObservableObject {
         return CLLocationCoordinate2D(latitude: avgLat, longitude: avgLon)
     }
     
-//MARK: - COMBINED(MULTIPLE) PIN UI
+// MARK: - COMBINED(MULTIPLE) PIN UI
     struct ClusterBubble: View {
         let count: Int
         @State private var scale: CGFloat = 0.0
@@ -172,7 +217,7 @@ class MapViewModel: ObservableObject {
             }
         }
     }
-    
+
 // MARK: - SINGLE PIN UI
     struct PinMarker: View {
         let action: () -> Void
@@ -182,7 +227,7 @@ class MapViewModel: ObservableObject {
             Button(action: action) {
                 Image(systemName: "skateboard")
                     .frame(width: 5, height: 15)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.darkblue)
             }
             .buttonStyle(.glassProminent)
             .scaleEffect(scale)
@@ -286,13 +331,14 @@ class MapViewModel: ObservableObject {
         }
     }
     //MARK: -   UPDATE/EDIT
-    func updatePin(_ pin: PinInfo, name: String, details: String, spotTypes: [SpotType], riskLevel: RiskLevel) async {
+    func updatePin(_ pin: PinInfo, name: String, details: String, spotTypes: [SpotType], riskLevel: RiskLevel, difficultyLevel: DifficultyLevel) async {
         guard let id = pin.id else { return }
         try? await Firestore.firestore().collection("pins").document(id).updateData([
             "pinName": name,
             "pinDetails": details,
             "spotTypes": spotTypes.map { $0.rawValue },
-            "riskLevel": riskLevel.rawValue
+            "riskLevel": riskLevel.rawValue,
+            "difficultyLevel": difficultyLevel.rawValue
         ])
     }
     //MARK: - DELETE PHOTO

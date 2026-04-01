@@ -25,6 +25,7 @@ struct AddPinView: View {
     @State private var showCamera: Bool = false
     @State private var selectedTypes: Set<SpotType> = []
     @State private var selectedRiskLevel: RiskLevel = .low
+    @State private var selectedDifficulty: DifficultyLevel = .beginner
     @State private var coordinate: CLLocationCoordinate2D?
     @State private var locationName: String?
     @State private var showLocationPicker = false
@@ -121,6 +122,29 @@ struct AddPinView: View {
                     }
                 }
 
+                // Difficulty level — segmented picker
+                Section("Difficulty") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("How hard is this spot to skate?")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Picker("Difficulty", selection: $selectedDifficulty) {
+                            ForEach(DifficultyLevel.allCases, id: \.self) { level in
+                                Text(level.label).tag(level)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        HStack {
+                            Image(systemName: selectedDifficulty.icon)
+                            Text(selectedDifficulty.label)
+                                .font(.subheadline.weight(.medium))
+                        }
+                        .foregroundStyle(selectedDifficulty.color)
+                    }
+                }
+
                 Section("Photos") {
                     PhotosPicker(selection: $selectedItems, maxSelectionCount: 10, matching: .images) {
                         Label("Add Photos", systemImage: "photo.on.rectangle.angled")
@@ -207,7 +231,8 @@ struct AddPinView: View {
                                     username: authService.currentUser?.username ?? "Unknown",
                                     images: images,
                                     spotTypes: Array(selectedTypes),
-                                    riskLevel: selectedRiskLevel
+                                    riskLevel: selectedRiskLevel,
+                                    difficultyLevel: selectedDifficulty
                                 )
                                 isSaving = false
                                 dismiss()

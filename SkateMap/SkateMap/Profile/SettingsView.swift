@@ -174,9 +174,7 @@ struct SettingsView: View {
                 .resizable()
                 .scaledToFill()
         } else if let url = authService.currentUser?.profilePicture, !url.isEmpty {
-            AsyncImage(url: URL(string: url)) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
+            CachedAsyncImage(url: URL(string: url)) {
                 Color.secondary.opacity(0.2)
             }
             .id(url)

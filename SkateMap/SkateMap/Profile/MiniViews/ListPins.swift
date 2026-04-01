@@ -12,11 +12,7 @@ struct PinListRow: View {
     var body: some View {
         HStack(spacing: 12) {
             if let firstURL = pin.imageURls.first, let url = URL(string: firstURL) {
-                AsyncImage(url: url) { image in
-                    image
-                        .resizable()
-                        .scaledToFill()
-                } placeholder: {
+                CachedAsyncImage(url: url) {
                     Color.secondary.opacity(0.2)
                 }
                 .frame(width: 50, height: 50)

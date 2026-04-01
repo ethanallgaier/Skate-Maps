@@ -30,7 +30,12 @@ struct PinInfoView: View {
     @State private var editedDetails = ""
     @State private var editedSpotTypes: Set<SpotType> = []
     @State private var editedRiskLevel: RiskLevel = .low
+    @State private var editedDifficulty: DifficultyLevel = .beginner
     @State private var isSaving = false
+
+    @State private var showReportSheet = false
+    @State private var reportReason = ""
+    @State private var showReportConfirmation = false
 
     @Environment(\.dismiss) var dismiss
     
@@ -100,6 +105,7 @@ struct PinInfoView: View {
                                                 editedDetails = currentPin.pinDetails
                                                 editedSpotTypes = Set(currentPin.spotTypes)
                                                 editedRiskLevel = currentPin.riskLevel
+                                                editedDifficulty = currentPin.difficultyLevel
                                                 isEditing = true
                                             }
                                         } label: {
@@ -135,7 +141,7 @@ struct PinInfoView: View {
 
                             // MARK: - Creator + Date
                             HStack(spacing: 4) {
-                                Label(currentPin.createdByUsername, systemImage: "person.circle")
+                                Label(viewModel.username(for: currentPin.createdByUID), systemImage: "person.circle")
                                     .font(.system(size: 14))
                                     .foregroundColor(.secondary)
                                 Text("·")
@@ -290,6 +296,41 @@ struct PinInfoView: View {
 
                             Divider()
 
+                            // MARK: - DIFFICULTY LEVEL
+                            Text("Difficulty")
+                                .font(.system(size: 18, weight: .bold))
+
+                            if isEditing {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("How hard is this spot to skate?")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+
+                                    Picker("Difficulty", selection: $editedDifficulty) {
+                                        ForEach(DifficultyLevel.allCases, id: \.self) { level in
+                                            Text(level.label).tag(level)
+                                        }
+                                    }
+                                    .pickerStyle(.segmented)
+
+                                    HStack {
+                                        Image(systemName: editedDifficulty.icon)
+                                        Text(editedDifficulty.label)
+                                            .font(.subheadline.weight(.medium))
+                                    }
+                                    .foregroundStyle(editedDifficulty.color)
+                                }
+                            } else {
+                                HStack(spacing: 6) {
+                                    Image(systemName: currentPin.difficultyLevel.icon)
+                                    Text(currentPin.difficultyLevel.label)
+                                        .font(.subheadline.weight(.medium))
+                                }
+                                .foregroundStyle(currentPin.difficultyLevel.color)
+                            }
+
+                            Divider()
+
                             // MARK: Add / Manage Photos (owner only)
                             if isOwner {
                                 VStack(alignment: .leading, spacing: 10) {
@@ -302,11 +343,7 @@ struct PinInfoView: View {
                                             HStack(spacing: 10) {
                                                 ForEach(Array(currentPin.imageURls.enumerated()), id: \.offset) { index, url in
                                                     ZStack(alignment: .topTrailing) {
-                                                        AsyncImage(url: URL(string: url)) { image in
-                                                            image
-                                                                .resizable()
-                                                                .scaledToFill()
-                                                        } placeholder: {
+                                                        CachedAsyncImage(url: URL(string: url)) {
                                                             Rectangle()
                                                                 .fill(Color(.systemGray5))
                                                                 .overlay(ProgressView())
@@ -397,6 +434,17 @@ struct PinInfoView: View {
                                 }
                             }
 
+                            // MARK: - Report Button (non-owners only)
+                            if !isOwner && !isEditing {
+                                Button {
+                                    showReportSheet = true
+                                } label: {
+                                    Label("Report this spot", systemImage: "flag")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.red)
+                                }
+                            }
+
                             Spacer(minLength: 20)
                         }
                         .padding(.horizontal, 20)
@@ -429,6 +477,49 @@ struct PinInfoView: View {
             }) {
                 CameraPicker(images: $selectedImages)
             }
+            .sheet(isPresented: $showReportSheet) {
+                NavigationStack {
+                    Form {
+                        Section("Why are you reporting this spot?") {
+                            Picker("Reason", selection: $reportReason) {
+                                Text("Select a reason").tag("")
+                                Text("Inappropriate content").tag("Inappropriate content")
+                                Text("Spam").tag("Spam")
+                                Text("Wrong location").tag("Wrong location")
+                                Text("Offensive language").tag("Offensive language")
+                                Text("Other").tag("Other")
+                            }
+                        }
+                    }
+                    .navigationTitle("Report Spot")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") {
+                                reportReason = ""
+                                showReportSheet = false
+                            }
+                        }
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Submit") {
+                                Task {
+                                    await viewModel.reportPin(currentPin, reason: reportReason)
+                                    reportReason = ""
+                                    showReportSheet = false
+                                    showReportConfirmation = true
+                                }
+                            }
+                            .disabled(reportReason.isEmpty)
+                        }
+                    }
+                }
+                .presentationDetents([.medium])
+            }
+            .alert("Report Submitted", isPresented: $showReportConfirmation) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Thanks for letting us know. We'll review this spot.")
+            }
         
     }
 
@@ -450,11 +541,7 @@ struct PinInfoView: View {
             } else {
                 TabView(selection: $currentPage) {
                     ForEach(Array(currentPin.imageURls.enumerated()), id: \.offset) { index, url in
-                        AsyncImage(url: URL(string: url)) { image in
-                            image
-                                .resizable()
-                                .scaledToFill()
-                        } placeholder: {
+                        CachedAsyncImage(url: URL(string: url)) {
                             Rectangle()
                                 .fill(Color(.systemGray5))
                                 .overlay(ProgressView())
@@ -522,7 +609,7 @@ struct PinInfoView: View {
                 Button {
                     isSaving = true
                     Task {
-                        await viewModel.updatePin(currentPin, name: editedName, details: editedDetails, spotTypes: Array(editedSpotTypes), riskLevel: editedRiskLevel)
+                        await viewModel.updatePin(currentPin, name: editedName, details: editedDetails, spotTypes: Array(editedSpotTypes), riskLevel: editedRiskLevel, difficultyLevel: editedDifficulty)
                         isSaving = false
                         isEditing = false
                     }

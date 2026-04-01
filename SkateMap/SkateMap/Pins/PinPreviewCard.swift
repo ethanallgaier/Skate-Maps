@@ -10,6 +10,7 @@ import SwiftUI
 //MARK: - MINI PREVIEW CARD. FIRST TAP ON A PIN
 struct PinPreviewCard: View {
     var pin: PinInfo
+    @ObservedObject var viewModel: MapViewModel
     var onTap: () -> Void
     var onDismiss: () -> Void
 
@@ -21,11 +22,7 @@ struct PinPreviewCard: View {
 
                 // Photo or placeholder
                 if let firstImage = pin.imageURls.first {
-                    AsyncImage(url: URL(string: firstImage)) { image in
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    } placeholder: {
+                    CachedAsyncImage(url: URL(string: firstImage)) {
                         ProgressView()
                     }
                     .frame(width: 70, height: 70)
@@ -42,7 +39,7 @@ struct PinPreviewCard: View {
 
                 // Spot info
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(pin.createdByUsername)
+                    Text(viewModel.username(for: pin.createdByUID))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Text(pin.pinName)
@@ -61,8 +58,8 @@ struct PinPreviewCard: View {
 
                         // Risk badge
                         HStack(spacing: 3) {
-                            Image(systemName: pin.riskLevel.icon)
-                            Text(pin.riskLevel.label)
+                            Image(systemName: pin.difficultyLevel.icon)
+                            Text(pin.difficultyLevel.label)
                         }
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(pin.riskLevel.color)
@@ -96,7 +93,7 @@ struct PinPreviewCard: View {
         imageURls: [],
         spotTypes: [.rail]
     )
-    PinPreviewCard(pin: mockPin) {
+    PinPreviewCard(pin: mockPin, viewModel: MapViewModel()) {
         print("tapped")
     } onDismiss: {
         print("dismissed")

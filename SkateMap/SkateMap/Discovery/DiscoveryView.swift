@@ -121,7 +121,7 @@ struct DiscoveryView: View {
                     // MARK: Spot of the Day
                     if let spot = spotOfTheDay {
                         sectionHeader("Spot of the Day", icon: "sparkles")
-                        SpotOfTheDayCard(pin: spot) {
+                        SpotOfTheDayCard(pin: spot, viewModel: viewModel) {
                             selectedPin = spot
                             showPinDetail = true
                         }

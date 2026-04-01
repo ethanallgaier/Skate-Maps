@@ -9,28 +9,30 @@ import SwiftUI
 
 struct SpotOfTheDayCard: View {
     let pin: PinInfo
+    @ObservedObject var viewModel: MapViewModel
     let onTap: () -> Void
 
     var body: some View {
         Button(action: onTap) {
             ZStack(alignment: .bottomLeading) {
                 // Background image or placeholder
-                if let firstURL = pin.imageURls.first, let url = URL(string: firstURL) {
-                    AsyncImage(url: url) { image in
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    } placeholder: {
+                Group {
+                    if let firstURL = pin.imageURls.first, let url = URL(string: firstURL) {
+                        CachedAsyncImage(url: url) {
+                            gradientPlaceholder
+                        }
+                    } else {
                         gradientPlaceholder
                     }
-                } else {
-                    gradientPlaceholder
                 }
+                .frame(maxWidth: .infinity)
+                .frame(height: 280)
+                .clipped()
 
                 // Gradient overlay for text readability
                 LinearGradient(
-                    colors: [.clear, .black.opacity(0.75)],
-                    startPoint: .center,
+                    colors: [.clear, .clear, .black.opacity(0.8)],
+                    startPoint: .top,
                     endPoint: .bottom
                 )
 
@@ -49,11 +51,12 @@ struct SpotOfTheDayCard: View {
                     }
 
                     Text(pin.pinName)
-                        .font(.title.bold())
+                        .font(.title2.bold())
                         .foregroundStyle(.white)
+                        .lineLimit(1)
 
-                    HStack(spacing: 12) {
-                        Label(pin.createdByUsername, systemImage: "person.circle")
+                    HStack(spacing: 10) {
+                        Label(viewModel.username(for: pin.createdByUID), systemImage: "person.circle")
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.8))
 
@@ -66,7 +69,6 @@ struct SpotOfTheDayCard: View {
                             .foregroundStyle(.yellow)
                         }
 
-                        // Risk badge
                         HStack(spacing: 3) {
                             Image(systemName: pin.riskLevel.icon)
                             Text(pin.riskLevel.label)
@@ -79,7 +81,6 @@ struct SpotOfTheDayCard: View {
             }
             .frame(height: 280)
             .clipShape(RoundedRectangle(cornerRadius: 20))
-            .glassEffect(in: .rect(cornerRadius: 20))
         }
         .buttonStyle(.plain)
     }

@@ -19,12 +19,15 @@ struct ContentView: View {
                 Tab("Explore", systemImage: "globe") {
                     MapView(viewModel: viewModel, locationManager: locationManager)
                 }
+                Tab("Discover", systemImage: "binoculars.fill") {
+                    DiscoveryView(viewModel: viewModel, locationManager: locationManager)
+                }
                 Tab("Profile", systemImage: "person.crop.circle") {
                     ProfileView(viewModel: viewModel)
                 }
                
             }
-            .tint(.black.opacity(0.8))
+            .tint(.red)
         
 //            .toolbarBackground(.ultraThinMaterial, for: .tabBar)
         } else {

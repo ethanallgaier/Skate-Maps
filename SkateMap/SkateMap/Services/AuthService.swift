@@ -67,6 +67,16 @@ class AuthService {
         }
     }
 
+    // MARK: - Forgot Password
+    func sendPasswordReset(email: String) async {
+        errorMessage = ""
+        do {
+            try await Auth.auth().sendPasswordReset(withEmail: email)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     // MARK: - Logout
     func logout() {
         try? Auth.auth().signOut()

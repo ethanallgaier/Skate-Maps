@@ -136,7 +136,7 @@ struct MapView: View {
             if let pin = selectedPin {
                 VStack {
                     Spacer()
-                    PinPreviewCard(pin: pin) {
+                    PinPreviewCard(pin: pin, viewModel: viewModel) {
                         withAnimation(.spring(duration: 0.8, bounce: 0.2)) {
                             showPinDetail = true
                         }

@@ -11,18 +11,23 @@ struct CollectionCard: View {
     let collection: CuratedCollection
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             Image(systemName: collection.icon)
-                .font(.title2)
+                .font(.title3)
                 .foregroundStyle(.blue)
+                .padding(.bottom, 2)
 
             Text(collection.title)
-                .font(.headline)
+                .font(.subheadline.bold())
                 .foregroundStyle(.primary)
+                .lineLimit(1)
 
             Text(collection.subtitle)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
+
+            Spacer(minLength: 0)
 
             Text("\(collection.pins.count) spots")
                 .font(.caption2.bold())
@@ -32,7 +37,8 @@ struct CollectionCard: View {
                 .foregroundStyle(.blue)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .frame(minHeight: 120)
+        .padding(14)
         .glassEffect(in: .rect(cornerRadius: 16))
     }
 }

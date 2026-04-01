@@ -26,6 +26,7 @@ struct DiscoveryView: View {
     @State private var selectedPin: PinInfo?
     @State private var showPinDetail = false
     @State private var selectedCollection: CuratedCollection?
+    @Namespace private var pinTransition
 
     // MARK: - Data
 
@@ -37,11 +38,14 @@ struct DiscoveryView: View {
         return sorted[daysSinceEpoch % sorted.count]
     }
 
+    private let maxDistanceMeters: Double = 25 * 1609.34 // 25 miles
+
     var nearMeSpots: [PinInfo] {
         guard locationManager.userLocation != nil else { return [] }
         return viewModel.pins
             .compactMap { pin -> (PinInfo, Double)? in
-                guard let dist = locationManager.distance(to: pin.coordinate) else { return nil }
+                guard let dist = locationManager.distance(to: pin.coordinate),
+                      dist <= maxDistanceMeters else { return nil }
                 return (pin, dist)
             }
             .sorted { $0.1 < $1.1 }
@@ -125,6 +129,7 @@ struct DiscoveryView: View {
                             selectedPin = spot
                             showPinDetail = true
                         }
+                        .matchedTransitionSource(id: spot.id, in: pinTransition)
                         .padding(.horizontal)
                     }
 
@@ -160,6 +165,7 @@ struct DiscoveryView: View {
             .fullScreenCover(isPresented: $showPinDetail) {
                 if let pin = selectedPin {
                     PinInfoView(pin: pin, viewModel: viewModel)
+                        .navigationTransition(.zoom(sourceID: pin.id, in: pinTransition))
                 }
             }
             .sheet(item: $selectedCollection) { collection in
@@ -191,6 +197,7 @@ struct DiscoveryView: View {
                         selectedPin = pin
                         showPinDetail = true
                     }
+                    .matchedTransitionSource(id: pin.id, in: pinTransition)
                 }
             }
             .padding(.horizontal)

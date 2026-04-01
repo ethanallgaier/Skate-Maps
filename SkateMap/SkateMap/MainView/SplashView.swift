@@ -19,36 +19,7 @@ struct SplashView: View {
     var body: some View {
         ZStack {
             
-            // MARK: - Animated Wavy Gradient
-            TimelineView(.animation) { timeline in
-                let time = timeline.date.timeIntervalSinceReferenceDate
-                
-                Canvas { context, size in
-                    context.addFilter(.blur(radius: 60))
-                    
-                    for i in 0..<3 {
-                        let x = size.width * (0.3 + 0.3 * sin(time * 0.3 + Double(i)))
-                        let y = size.height * (0.3 + 0.3 * cos(time * 0.2 + Double(i)))
-                        
-                        let rect = CGRect(x: x - 150, y: y - 150, width: 300, height: 300)
-                        
-                        context.fill(
-                            Path(ellipseIn: rect),
-                            with: .linearGradient(
-                                Gradient(colors: waveColors[i]),
-                                startPoint: CGPoint(x: rect.minX, y: rect.minY),
-                                endPoint: CGPoint(x: rect.maxX, y: rect.maxY)
-                            )
-                        )
-                    }
-                }
-            }
-            .ignoresSafeArea()
-            
-            
-            // MARK: - Soft Overlay (makes it clean)
-            Color.black.opacity(0.15)
-                .ignoresSafeArea()
+    
             
             
             // MARK: - Logo
@@ -62,7 +33,7 @@ struct SplashView: View {
 //                
                 Text("Skate-Map") // change name
                     .font(.system(size: 30, weight: .medium))
-                    .foregroundColor(.white.opacity(0.85))
+                    .foregroundColor(.red.opacity(0.85))
                     .opacity(showLogo ? 1 : 0)
             }
         }

@@ -96,6 +96,7 @@ struct LoginView: View {
                         SignUpView()
                     }
                     .fontWeight(.semibold)
+                    .foregroundStyle(.blue)
                 }
                 .font(.subheadline)
                 .padding(.vertical, 16)

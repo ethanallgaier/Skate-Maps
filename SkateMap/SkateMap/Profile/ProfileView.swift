@@ -3,6 +3,9 @@ import FirebaseAuth
 
 struct ProfileView: View {
     @State var showSaved: Bool = false
+    @State private var selectedPin: PinInfo?
+    @State private var showPinDetail = false
+    @Namespace private var pinTransition
     @ObservedObject var viewModel: MapViewModel
     @Environment(AuthService.self) var authService
     var profileRefreshID: UUID = UUID()
@@ -74,10 +77,14 @@ struct ProfileView: View {
                             .padding(.top)
                         } else {
                             ForEach(myPins) { pin in
-                                NavigationLink(destination: PinInfoView(pin: pin, viewModel: viewModel)) {
+                                Button {
+                                    selectedPin = pin
+                                    showPinDetail = true
+                                } label: {
                                     PinListRow(pin: pin)
                                 }
                                 .buttonStyle(.plain)
+                                .matchedTransitionSource(id: pin.id, in: pinTransition)
                                 .padding(.horizontal)
                             }
                         }
@@ -94,6 +101,12 @@ struct ProfileView: View {
                         Image(systemName: "gear")
                     }
                 }
+            }
+        }
+        .fullScreenCover(isPresented: $showPinDetail) {
+            if let pin = selectedPin {
+                PinInfoView(pin: pin, viewModel: viewModel)
+                    .navigationTransition(.zoom(sourceID: pin.id, in: pinTransition))
             }
         }
         .fullScreenCover(isPresented: $showSaved) {

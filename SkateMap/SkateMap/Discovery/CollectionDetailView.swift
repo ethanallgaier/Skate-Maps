@@ -13,6 +13,7 @@ struct CollectionDetailView: View {
 
     @State private var selectedPin: PinInfo?
     @State private var showPinDetail = false
+    @Namespace private var pinTransition
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
@@ -27,6 +28,7 @@ struct CollectionDetailView: View {
                             PinListRow(pin: pin)
                         }
                         .buttonStyle(.plain)
+                        .matchedTransitionSource(id: pin.id, in: pinTransition)
                     }
                 }
                 .padding(.horizontal)
@@ -42,6 +44,7 @@ struct CollectionDetailView: View {
             .fullScreenCover(isPresented: $showPinDetail) {
                 if let pin = selectedPin {
                     PinInfoView(pin: pin, viewModel: viewModel)
+                        .navigationTransition(.zoom(sourceID: pin.id, in: pinTransition))
                 }
             }
         }

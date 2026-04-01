@@ -27,7 +27,7 @@ struct ContentView: View {
                 }
                
             }
-            .tint(.red)
+            .tint(.blue)
         
 //            .toolbarBackground(.ultraThinMaterial, for: .tabBar)
         } else {

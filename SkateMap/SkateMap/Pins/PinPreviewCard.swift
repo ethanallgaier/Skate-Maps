@@ -62,10 +62,10 @@ struct PinPreviewCard: View {
                             Text(pin.difficultyLevel.label)
                         }
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(pin.riskLevel.color)
+                        .foregroundStyle(pin.difficultyLevel.color)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
-                        .background(pin.riskLevel.color.opacity(0.15), in: Capsule())
+                        .background(pin.difficultyLevel.color.opacity(0.15), in: Capsule())
                     }
                 }
 

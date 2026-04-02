@@ -12,6 +12,78 @@ class MapViewModel: ObservableObject {
 
     @Published var pins: [PinInfo] = []
 
+    // MARK: - Skateparks (from OpenStreetMap)
+    @Published var skateparks: [Skatepark] = []
+    @Published var showSkateparks = true
+    private var lastSkateparkFetchRegion: MKCoordinateRegion?
+
+    // 🚨 Add this line to track the active network task
+    private var fetchTask: Task<Void, Never>?
+
+    func fetchSkateparksIfNeeded(for region: MKCoordinateRegion) {
+        // 1. Cancel the previous task immediately to stop "spamming" the API
+        fetchTask?.cancel()
+
+        // 2. Significant movement check (Keep your existing logic)
+        if let last = lastSkateparkFetchRegion {
+            let latDiff = abs(last.center.latitude - region.center.latitude)
+            let lonDiff = abs(last.center.longitude - region.center.longitude)
+            let spanChange = abs(last.span.latitudeDelta - region.span.latitudeDelta)
+            
+            if latDiff < region.span.latitudeDelta * 0.3 &&
+               lonDiff < region.span.longitudeDelta * 0.3 &&
+               spanChange < region.span.latitudeDelta * 0.5 {
+                return
+            }
+        }
+        
+        // 3. Create the new task with a slight debounce delay
+        fetchTask = Task {
+            do {
+                // ⏱️ Debounce: Wait 0.4 seconds before hitting the server.
+                // If the user moves the map again during this window, this task gets cancelled.
+                try await Task.sleep(nanoseconds: 400_000_000)
+                
+                // Safety check: Don't proceed if the user moved the map again
+                guard !Task.isCancelled else { return }
+
+                lastSkateparkFetchRegion = region
+                
+                var expanded = region
+                expanded.span.latitudeDelta *= 1.3
+                expanded.span.longitudeDelta *= 1.3
+                
+                let parks = try await SkateparkService.fetchSkateparks(in: expanded)
+                
+                // Final check before updating UI
+                guard !Task.isCancelled else { return }
+
+                await MainActor.run {
+                    // Cap at 50 to keep the map performant
+                    self.skateparks = Array(parks.prefix(50))
+                    print("✅ Successfully updated map with \(self.skateparks.count) parks.")
+                }
+            } catch is CancellationError {
+                // Normal behavior when user is dragging the map; ignore it.
+            } catch {
+                print("Error fetching skateparks: \(error)")
+            }
+        }
+    }
+
+    /// Resolve the name of an unnamed skatepark via reverse geocoding
+    func resolveNameIfNeeded(for park: Skatepark) {
+        guard !park.hasRealName else { return }
+        Task {
+            let resolved = await SkateparkService.resolveLocationName(for: park)
+            await MainActor.run {
+                if let index = self.skateparks.firstIndex(where: { $0.id == park.id }) {
+                    self.skateparks[index] = resolved
+                }
+            }
+        }
+    }
+
     // MARK: - Username Cache (live lookup by UID)
     @Published var usernameCache: [String: String] = [:]
 
@@ -228,6 +300,27 @@ class MapViewModel: ObservableObject {
                 Image(systemName: "skateboard")
                     .frame(width: 5, height: 15)
                     .foregroundStyle(Color.darkblue)
+            }
+            .buttonStyle(.glassProminent)
+            .scaleEffect(scale)
+            .onAppear {
+                withAnimation(.smooth(duration: 0.4)) {
+                    scale = 1.0
+                }
+            }
+        }
+    }
+    
+// MARK: - SKATEPARK PIN UI
+    struct SkateparkMarker: View {
+        let action: () -> Void
+        @State private var scale: CGFloat = 0.0
+
+        var body: some View {
+            Button(action: action) {
+                Image(systemName: "staroflife")
+                    .frame(width: 5, height: 15)
+                    .foregroundStyle(.white)
             }
             .buttonStyle(.glassProminent)
             .scaleEffect(scale)

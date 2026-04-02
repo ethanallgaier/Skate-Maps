@@ -14,6 +14,7 @@ struct MapView: View {
     @State private var selectedTypes: Set<SpotType> = []
     @State private var searchText = ""
     @State private var showFilters = false
+    @State private var selectedSkatepark: Skatepark?
     
     @Namespace private var pinTransition
     @State private var ignoreNextCameraChange = false
@@ -78,17 +79,37 @@ struct MapView: View {
                         }
                     }
                 }
+
+                // MARK: - Skatepark Annotations
+                ForEach(viewModel.showSkateparks ? viewModel.skateparks : []) { park in
+                        Annotation(park.name, coordinate: park.coordinate) {
+                            MapViewModel.SkateparkMarker {
+                                selectedPin = nil
+                                selectedSkatepark = park
+                                viewModel.resolveNameIfNeeded(for: park)
+                                ignoreNextCameraChange = true
+                                withAnimation(.spring) {
+                                    cameraPosition = .region(MKCoordinateRegion(
+                                        center: park.coordinate,
+                                        span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
+                                    ))
+                                }
+                            }
+                        }
+                    }
             }
             
             
-            //Whats this
-            .onMapCameraChange(frequency: .onEnd) { context in //
-                currentRegion = context.region //
+            .onMapCameraChange(frequency: .onEnd) { context in
+                currentRegion = context.region
                 if ignoreNextCameraChange {
                     ignoreNextCameraChange = false
                 } else if !showPinDetail {
                     selectedPin = nil
+                    selectedSkatepark = nil
                 }
+                // Fetch skateparks for the new region
+                viewModel.fetchSkateparksIfNeeded(for: context.region)
             }
             .mapStyle(.hybrid(pointsOfInterest: .excludingAll))
             .mapControls { }//Leaving empty so compass wont appear
@@ -125,11 +146,12 @@ struct MapView: View {
             ZStack(alignment: .bottomTrailing) {
                     Color.clear
                     VStack(spacing: 8) {
+                        skateparkToggle
                         locationButton
                         addPinButton
                     }
                     .padding(.trailing)
-                    .padding(.bottom, selectedPin != nil ? 140 : 40)
+                    .padding(.bottom, (selectedPin != nil || selectedSkatepark != nil) ? 140 : 40)
                 }
             
             // MARK:  PIN DETAIL CARD
@@ -149,8 +171,20 @@ struct MapView: View {
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
+
+            // MARK: SKATEPARK PREVIEW CARD
+            if let parkID = selectedSkatepark?.id,
+               let park = viewModel.skateparks.first(where: { $0.id == parkID }) {
+                VStack {
+                    Spacer()
+                    skateparkPreviewCard(park)
+                        .padding(.bottom, 20)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
         .animation(.spring, value: selectedPin)
+        .animation(.spring, value: selectedSkatepark)
     }
     
     
@@ -290,6 +324,76 @@ struct MapView: View {
                 .frame(width: 30, height: 40)
         }
         .buttonStyle(.glassProminent)
+    }
+
+    // MARK: - SKATEPARK TOGGLE BUTTON
+    var skateparkToggle: some View {
+        Button {
+            withAnimation {
+                viewModel.showSkateparks.toggle()
+                if !viewModel.showSkateparks {
+                    selectedSkatepark = nil
+                }
+            }
+        } label: {
+            Image(systemName: viewModel.showSkateparks ? "staroflife" : "staroflife.fill")
+                .foregroundStyle(viewModel.showSkateparks ? .white : .gray)
+                .bold()
+                .frame(width: 30, height: 40)
+        }
+        .buttonStyle(.glassProminent)
+    }
+
+    // MARK: - SKATEPARK PREVIEW CARD
+    func skateparkPreviewCard(_ park: Skatepark) -> some View {
+        Button {
+            // Open in Apple Maps
+            let mapItem = MKMapItem(location: CLLocation(latitude: park.latitude, longitude: park.longitude), address: nil)
+            mapItem.name = park.name
+            mapItem.openInMaps(launchOptions: [
+                MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
+            ])
+        } label: {
+            HStack(spacing: 12) {
+                // Icon
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(.green.opacity(0.2))
+                        .frame(width: 70, height: 70)
+                    Image(systemName: "figure.skating")
+                        .font(.title)
+                        .foregroundStyle(.green)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(park.name)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                    HStack(spacing: 8) {
+                        if let surface = park.surface {
+                            Text(surface.capitalized)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.green)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(.green.opacity(0.15), in: Capsule())
+                        }
+                        Text("Tap for directions")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
+                    .foregroundStyle(.green)
+            }
+            .padding()
+            .glassEffect(in: .rect(cornerRadius: 16))
+            .padding(.horizontal)
+        }
     }
 }
 

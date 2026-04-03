@@ -20,38 +20,37 @@ enum SkateparkService {
         let east = region.center.longitude + region.span.longitudeDelta / 2
         let bbox = "(\(south),\(west),\(north),\(east))"
 
-        // Query for both tagging conventions:
-        //  leisure=pitch + sport=skateboard  (traditional)
-        //  leisure=skate_park                (newer proposal)
+        // nwr = node/way/relation combined; exact match is much faster than regex
         let query = """
         [out:json][timeout:15];
         (
-          node["leisure"="pitch"]["sport"~"skateboard"]\(bbox);
-          way["leisure"="pitch"]["sport"~"skateboard"]\(bbox);
-          node["leisure"="skate_park"]\(bbox);
-          way["leisure"="skate_park"]\(bbox);
+          nwr["sport"="skateboard"]\(bbox);
+          nwr["leisure"="skate_park"]\(bbox);
         );
         out center;
         """
 
-        var components = URLComponents(string: endpoint)!
-        components.queryItems = [URLQueryItem(name: "data", value: query)]
+        var request = URLRequest(url: URL(string: endpoint)!)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
-        guard let url = components.url else {
-            throw URLError(.badURL)
+        var body = URLComponents()
+        body.queryItems = [URLQueryItem(name: "data", value: query)]
+        request.httpBody = body.percentEncodedQuery?.data(using: .utf8)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
         }
 
-        let (data, _) = try await URLSession.shared.data(from: url)
+        let decoded = try JSONDecoder().decode(OverpassResponse.self, from: data)
 
-        let response = try JSONDecoder().decode(OverpassResponse.self, from: data)
-
-        return response.elements.compactMap { element -> Skatepark? in
-            // Ways use "center" coords; nodes use top-level lat/lon
+        let parks = decoded.elements.compactMap { element -> Skatepark? in
             let lat = element.center?.lat ?? element.lat
             let lon = element.center?.lon ?? element.lon
             guard let lat, let lon else { return nil }
 
-            // Try multiple OSM tags to find a real name
             let tags = element.tags ?? [:]
             let name = tags["name"]
                 ?? tags["alt_name"]
@@ -59,10 +58,9 @@ enum SkateparkService {
                 ?? tags["operator"]
                 ?? "Skatepark"
 
-            let surface = tags["surface"]
-
-            return Skatepark(id: element.id, name: name, latitude: lat, longitude: lon, surface: surface)
+            return Skatepark(id: element.id, name: name, latitude: lat, longitude: lon, surface: tags["surface"])
         }
+        return parks
     }
 
     /// Reverse geocodes a single skatepark to get a city/state name.

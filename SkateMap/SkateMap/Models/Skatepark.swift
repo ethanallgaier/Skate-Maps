@@ -23,6 +23,6 @@ struct Skatepark: Identifiable, Equatable, Sendable {
 
     /// True if the name is just a generic fallback (not from OSM data)
     var hasRealName: Bool {
-        !name.hasPrefix("Skatepark")
+        name != "Skatepark"
     }
 }

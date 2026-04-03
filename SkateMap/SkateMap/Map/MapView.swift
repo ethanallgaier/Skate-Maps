@@ -32,6 +32,33 @@ struct MapView: View {
             }
         }
     }
+
+    /// Pre-computed skatepark clusters, capped at 30 to keep Map responsive
+    var visibleSkateparkClusters: [[Skatepark]] {
+        guard viewModel.showSkateparks, !viewModel.skateparks.isEmpty else { return [] }
+        guard currentRegion.span.latitudeDelta > 0.0001 else { return [] }
+
+        // Only include parks within the visible region (+10% buffer)
+        let halfLat = currentRegion.span.latitudeDelta / 2 * 1.1
+        let halfLon = currentRegion.span.longitudeDelta / 2 * 1.1
+        let visibleParks = viewModel.skateparks.filter { park in
+            abs(park.latitude - currentRegion.center.latitude) <= halfLat &&
+            abs(park.longitude - currentRegion.center.longitude) <= halfLon
+        }
+        guard !visibleParks.isEmpty else { return [] }
+
+        let clusters = viewModel.clusteredSkateparks(for: currentRegion, from: visibleParks)
+        guard clusters.count > 30 else { return clusters }
+
+        let center = currentRegion.center
+        return Array(clusters.sorted { a, b in
+            let aCenter = a.first!
+            let bCenter = b.first!
+            let aDist = abs(aCenter.latitude - center.latitude) + abs(aCenter.longitude - center.longitude)
+            let bDist = abs(bCenter.latitude - center.latitude) + abs(bCenter.longitude - center.longitude)
+            return aDist < bDist
+        }.prefix(30))
+    }
     
     // MARK: - Main
     var body: some View {
@@ -80,8 +107,9 @@ struct MapView: View {
                     }
                 }
 
-                // MARK: - Skatepark Annotations
-                ForEach(viewModel.showSkateparks ? viewModel.skateparks : []) { park in
+                // MARK: - Skatepark Annotations (Clustered, max 30)
+                ForEach(visibleSkateparkClusters, id: \.first?.id) { cluster in
+                    if cluster.count == 1, let park = cluster.first {
                         Annotation(park.name, coordinate: park.coordinate) {
                             MapViewModel.SkateparkMarker {
                                 selectedPin = nil
@@ -96,7 +124,26 @@ struct MapView: View {
                                 }
                             }
                         }
+                    } else if cluster.first != nil {
+                        let center = viewModel.centerCoordinate(of: cluster)
+                        Annotation("", coordinate: center) {
+                            Button {
+                                ignoreNextCameraChange = true
+                                withAnimation(.spring) {
+                                    cameraPosition = .region(MKCoordinateRegion(
+                                        center: center,
+                                        span: MKCoordinateSpan(
+                                            latitudeDelta: currentRegion.span.latitudeDelta * 0.4,
+                                            longitudeDelta: currentRegion.span.longitudeDelta * 0.4
+                                        )
+                                    ))
+                                }
+                            } label: {
+                                MapViewModel.SkateparkClusterBubble(count: cluster.count)
+                            }
+                        }
                     }
+                }
             }
             
             
@@ -108,7 +155,6 @@ struct MapView: View {
                     selectedPin = nil
                     selectedSkatepark = nil
                 }
-                // Fetch skateparks for the new region
                 viewModel.fetchSkateparksIfNeeded(for: context.region)
             }
             .mapStyle(.hybrid(pointsOfInterest: .excludingAll))
@@ -336,10 +382,17 @@ struct MapView: View {
                 }
             }
         } label: {
-            Image(systemName: viewModel.showSkateparks ? "staroflife" : "staroflife.fill")
-                .foregroundStyle(viewModel.showSkateparks ? .white : .gray)
-                .bold()
-                .frame(width: 30, height: 40)
+            Group {
+                if viewModel.isLoadingSkateparks && viewModel.showSkateparks {
+                    ProgressView()
+                        .tint(.white)
+                } else {
+                    Image(systemName: viewModel.showSkateparks ? "figure.skating" : "figure.skating")
+                        .foregroundStyle(viewModel.showSkateparks ? .white : .gray)
+                        .bold()
+                }
+            }
+            .frame(width: 30, height: 40)
         }
         .buttonStyle(.glassProminent)
     }

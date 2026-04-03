@@ -15,58 +15,60 @@ class MapViewModel: ObservableObject {
     // MARK: - Skateparks (from OpenStreetMap)
     @Published var skateparks: [Skatepark] = []
     @Published var showSkateparks = true
+    @Published var isLoadingSkateparks = false
     private var lastSkateparkFetchRegion: MKCoordinateRegion?
 
     // 🚨 Add this line to track the active network task
     private var fetchTask: Task<Void, Never>?
 
     func fetchSkateparksIfNeeded(for region: MKCoordinateRegion) {
-        // 1. Cancel the previous task immediately to stop "spamming" the API
         fetchTask?.cancel()
 
-        // 2. Significant movement check (Keep your existing logic)
+        // Don't fetch if zoomed out too far
+        guard region.span.latitudeDelta < 1.0 else {
+            skateparks = []
+            isLoadingSkateparks = false
+            return
+        }
+
         if let last = lastSkateparkFetchRegion {
             let latDiff = abs(last.center.latitude - region.center.latitude)
             let lonDiff = abs(last.center.longitude - region.center.longitude)
-            let spanChange = abs(last.span.latitudeDelta - region.span.latitudeDelta)
-            
-            if latDiff < region.span.latitudeDelta * 0.3 &&
-               lonDiff < region.span.longitudeDelta * 0.3 &&
-               spanChange < region.span.latitudeDelta * 0.5 {
-                return
-            }
+            let refSpan = min(last.span.latitudeDelta, region.span.latitudeDelta)
+            let pannedFar = latDiff > refSpan * 0.3 || lonDiff > refSpan * 0.3
+            let zoomRatio = region.span.latitudeDelta / max(last.span.latitudeDelta, 0.0001)
+            let zoomedSignificantly = zoomRatio > 1.5 || zoomRatio < 0.5
+
+            if !pannedFar && !zoomedSignificantly { return }
         }
-        
-        // 3. Create the new task with a slight debounce delay
+
         fetchTask = Task {
             do {
-                // ⏱️ Debounce: Wait 0.4 seconds before hitting the server.
-                // If the user moves the map again during this window, this task gets cancelled.
                 try await Task.sleep(nanoseconds: 400_000_000)
-                
-                // Safety check: Don't proceed if the user moved the map again
                 guard !Task.isCancelled else { return }
 
+                await MainActor.run { self.isLoadingSkateparks = true }
                 lastSkateparkFetchRegion = region
-                
+
                 var expanded = region
-                expanded.span.latitudeDelta *= 1.3
-                expanded.span.longitudeDelta *= 1.3
-                
+                expanded.span.latitudeDelta = min(expanded.span.latitudeDelta * 1.3, 0.8)
+                expanded.span.longitudeDelta = min(expanded.span.longitudeDelta * 1.3, 0.8)
+
                 let parks = try await SkateparkService.fetchSkateparks(in: expanded)
-                
-                // Final check before updating UI
                 guard !Task.isCancelled else { return }
 
                 await MainActor.run {
-                    // Cap at 50 to keep the map performant
-                    self.skateparks = Array(parks.prefix(50))
-                    print("✅ Successfully updated map with \(self.skateparks.count) parks.")
+                    self.skateparks = parks
+                    self.isLoadingSkateparks = false
+                    print("[Skateparks] Loaded \(parks.count) parks")
                 }
             } catch is CancellationError {
-                // Normal behavior when user is dragging the map; ignore it.
+                await MainActor.run { self.isLoadingSkateparks = false }
+            } catch let urlError as URLError where urlError.code == .cancelled {
+                await MainActor.run { self.isLoadingSkateparks = false }
             } catch {
-                print("Error fetching skateparks: \(error)")
+                print("[Skateparks] Error: \(error.localizedDescription)")
+                await MainActor.run { self.isLoadingSkateparks = false }
             }
         }
     }
@@ -318,7 +320,7 @@ class MapViewModel: ObservableObject {
 
         var body: some View {
             Button(action: action) {
-                Image(systemName: "staroflife")
+                Image(systemName: "figure.skating")
                     .frame(width: 5, height: 15)
                     .foregroundStyle(.white)
             }
@@ -331,7 +333,60 @@ class MapViewModel: ObservableObject {
             }
         }
     }
-    
+
+// MARK: - SKATEPARK CLUSTER BUBBLE
+    struct SkateparkClusterBubble: View {
+        let count: Int
+        @State private var scale: CGFloat = 0.0
+
+        var body: some View {
+            ZStack {
+                Circle()
+                    .fill(.green)
+                    .frame(width: 40, height: 40)
+                Text("\(count)")
+                    .foregroundStyle(.white)
+                    .bold()
+            }
+            .scaleEffect(scale)
+            .onAppear {
+                withAnimation(.smooth(duration: 0.4)) {
+                    scale = 1.0
+                }
+            }
+        }
+    }
+
+// MARK: - SKATEPARK CLUSTERING
+    func clusteredSkateparks(for region: MKCoordinateRegion, from parks: [Skatepark]) -> [[Skatepark]] {
+        let threshold = region.span.latitudeDelta * 0.1
+        var clusters: [[Skatepark]] = []
+        var assigned = Set<Int64>()
+
+        for park in parks {
+            guard !assigned.contains(park.id) else { continue }
+            var cluster = [park]
+            assigned.insert(park.id)
+
+            for other in parks {
+                guard !assigned.contains(other.id) else { continue }
+                if abs(park.latitude - other.latitude) < threshold &&
+                   abs(park.longitude - other.longitude) < threshold {
+                    cluster.append(other)
+                    assigned.insert(other.id)
+                }
+            }
+            clusters.append(cluster)
+        }
+        return clusters
+    }
+
+    func centerCoordinate(of cluster: [Skatepark]) -> CLLocationCoordinate2D {
+        let avgLat = cluster.map { $0.latitude }.reduce(0, +) / Double(cluster.count)
+        let avgLon = cluster.map { $0.longitude }.reduce(0, +) / Double(cluster.count)
+        return CLLocationCoordinate2D(latitude: avgLat, longitude: avgLon)
+    }
+
 //MARK: - PLACEMENT PIN(WHEN CHOOSING A SPOT)
     struct CircularTextPin: View {
         let text = "CHOOSE A SPOT"

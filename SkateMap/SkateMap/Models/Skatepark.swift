@@ -8,10 +8,10 @@
 import Foundation
 import CoreLocation
 
-/// Represents a skatepark fetched from OpenStreetMap data.
+/// Represents a skatepark found via MapKit search.
 /// These are read-only — users can't edit or rate them.
 struct Skatepark: Identifiable, Equatable, Sendable {
-    let id: Int64
+    let id: String
     let name: String
     let latitude: Double
     let longitude: Double
@@ -21,7 +21,7 @@ struct Skatepark: Identifiable, Equatable, Sendable {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 
-    /// True if the name is just a generic fallback (not from OSM data)
+    /// True if the name came from MapKit (not a generic fallback)
     var hasRealName: Bool {
         name != "Skatepark"
     }

@@ -6,6 +6,37 @@ import UIKit
 internal import Combine
 import SwiftUI
 
+/// Unified pin type that wraps both user pins and skateparks for clustering
+enum MapPin: Identifiable {
+    case userPin(PinInfo)
+    case skatepark(Skatepark)
+
+    var id: String {
+        switch self {
+        case .userPin(let pin): return pin.id ?? ""
+        case .skatepark(let park): return "sp_\(park.id)"
+        }
+    }
+
+    var latitude: Double {
+        switch self {
+        case .userPin(let pin): return pin.latitude
+        case .skatepark(let park): return park.latitude
+        }
+    }
+
+    var longitude: Double {
+        switch self {
+        case .userPin(let pin): return pin.longitude
+        case .skatepark(let park): return park.longitude
+        }
+    }
+
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+}
+
 class MapViewModel: ObservableObject {
     
     private let dataBase = Firestore.firestore()
@@ -24,12 +55,8 @@ class MapViewModel: ObservableObject {
     func fetchSkateparksIfNeeded(for region: MKCoordinateRegion) {
         fetchTask?.cancel()
 
-        // Don't fetch if zoomed out too far
-        guard region.span.latitudeDelta < 1.0 else {
-            skateparks = []
-            isLoadingSkateparks = false
-            return
-        }
+        // Skip fetching when zoomed out too far (results would be too spread out)
+        guard region.span.latitudeDelta < 1.0 else { return }
 
         if let last = lastSkateparkFetchRegion {
             let latDiff = abs(last.center.latitude - region.center.latitude)
@@ -44,27 +71,23 @@ class MapViewModel: ObservableObject {
 
         fetchTask = Task {
             do {
-                try await Task.sleep(nanoseconds: 400_000_000)
+                try await Task.sleep(nanoseconds: 250_000_000)
                 guard !Task.isCancelled else { return }
 
                 await MainActor.run { self.isLoadingSkateparks = true }
                 lastSkateparkFetchRegion = region
 
-                var expanded = region
-                expanded.span.latitudeDelta = min(expanded.span.latitudeDelta * 1.3, 0.8)
-                expanded.span.longitudeDelta = min(expanded.span.longitudeDelta * 1.3, 0.8)
-
-                let parks = try await SkateparkService.fetchSkateparks(in: expanded)
+                let parks = try await SkateparkService.fetchSkateparks(in: region)
                 guard !Task.isCancelled else { return }
 
                 await MainActor.run {
-                    self.skateparks = parks
+                    // Merge new parks into existing — keep previously discovered ones
+                    let existingIDs = Set(self.skateparks.map { $0.id })
+                    let newParks = parks.filter { !existingIDs.contains($0.id) }
+                    self.skateparks.append(contentsOf: newParks)
                     self.isLoadingSkateparks = false
-                    print("[Skateparks] Loaded \(parks.count) parks")
                 }
             } catch is CancellationError {
-                await MainActor.run { self.isLoadingSkateparks = false }
-            } catch let urlError as URLError where urlError.code == .cancelled {
                 await MainActor.run { self.isLoadingSkateparks = false }
             } catch {
                 print("[Skateparks] Error: \(error.localizedDescription)")
@@ -239,139 +262,26 @@ class MapViewModel: ObservableObject {
         }
     }
     
-//MARK: - COMBINED PIN FUNCIONALLITY
-    func clusteredPins(for region: MKCoordinateRegion, from pins: [PinInfo]) -> [[PinInfo]] {
-        let threshold = region.span.latitudeDelta * 0.1
-        var clusters: [[PinInfo]] = []
+//MARK: - UNIFIED PIN CLUSTERING
+    func clusteredMapPins(for region: MKCoordinateRegion, from pins: [MapPin]) -> [[MapPin]] {
+        // Only cluster when zoomed far out — keep pins separate at close zoom
+        guard region.span.latitudeDelta > 0.3 else {
+            return pins.map { [$0] }
+        }
+
+        let threshold = region.span.latitudeDelta * 0.03
+        var clusters: [[MapPin]] = []
         var assigned = Set<String>()
 
         for pin in pins {
-            guard let id = pin.id, !assigned.contains(id) else { continue }
+            guard !assigned.contains(pin.id) else { continue }
             var cluster = [pin]
-            assigned.insert(id)
+            assigned.insert(pin.id)
 
             for other in pins {
-                guard let otherId = other.id, !assigned.contains(otherId) else { continue }
+                guard !assigned.contains(other.id) else { continue }
                 if abs(pin.latitude - other.latitude) < threshold &&
                    abs(pin.longitude - other.longitude) < threshold {
-                    cluster.append(other)
-                    assigned.insert(otherId)
-                }
-            }
-            clusters.append(cluster)
-        }
-        return clusters
-    }
-    
-//MARK: - LOCATION OF COMBINED PIN
-    func centerCoordinate(of cluster: [PinInfo]) -> CLLocationCoordinate2D {
-        let avgLat = cluster.map { $0.latitude }.reduce(0, +) / Double(cluster.count)
-        let avgLon = cluster.map { $0.longitude }.reduce(0, +) / Double(cluster.count)
-        return CLLocationCoordinate2D(latitude: avgLat, longitude: avgLon)
-    }
-    
-// MARK: - COMBINED(MULTIPLE) PIN UI
-    struct ClusterBubble: View {
-        let count: Int
-        @State private var scale: CGFloat = 0.0
-
-        var body: some View {
-            ZStack {
-                Circle()
-                    .frame(width: 40, height: 40)
-                Text("\(count)")
-                    .foregroundStyle(.white)
-                    .bold()
-            }
-            .scaleEffect(scale)
-            .onAppear {
-                withAnimation(.smooth(duration: 0.4)) {
-                    scale = 1.0
-                }
-            }
-        }
-    }
-
-// MARK: - SINGLE PIN UI
-    struct PinMarker: View {
-        let action: () -> Void
-        @State private var scale: CGFloat = 0.0
-
-        var body: some View {
-            Button(action: action) {
-                Image(systemName: "skateboard")
-                    .frame(width: 5, height: 15)
-                    .foregroundStyle(Color.darkblue)
-            }
-            .buttonStyle(.glassProminent)
-            .scaleEffect(scale)
-            .onAppear {
-                withAnimation(.smooth(duration: 0.4)) {
-                    scale = 1.0
-                }
-            }
-        }
-    }
-    
-// MARK: - SKATEPARK PIN UI
-    struct SkateparkMarker: View {
-        let action: () -> Void
-        @State private var scale: CGFloat = 0.0
-
-        var body: some View {
-            Button(action: action) {
-                Image(systemName: "figure.skating")
-                    .frame(width: 5, height: 15)
-                    .foregroundStyle(.white)
-            }
-            .buttonStyle(.glassProminent)
-            .scaleEffect(scale)
-            .onAppear {
-                withAnimation(.smooth(duration: 0.4)) {
-                    scale = 1.0
-                }
-            }
-        }
-    }
-
-// MARK: - SKATEPARK CLUSTER BUBBLE
-    struct SkateparkClusterBubble: View {
-        let count: Int
-        @State private var scale: CGFloat = 0.0
-
-        var body: some View {
-            ZStack {
-                Circle()
-                    .fill(.green)
-                    .frame(width: 40, height: 40)
-                Text("\(count)")
-                    .foregroundStyle(.white)
-                    .bold()
-            }
-            .scaleEffect(scale)
-            .onAppear {
-                withAnimation(.smooth(duration: 0.4)) {
-                    scale = 1.0
-                }
-            }
-        }
-    }
-
-// MARK: - SKATEPARK CLUSTERING
-    func clusteredSkateparks(for region: MKCoordinateRegion, from parks: [Skatepark]) -> [[Skatepark]] {
-        let threshold = region.span.latitudeDelta * 0.1
-        var clusters: [[Skatepark]] = []
-        var assigned = Set<Int64>()
-
-        for park in parks {
-            guard !assigned.contains(park.id) else { continue }
-            var cluster = [park]
-            assigned.insert(park.id)
-
-            for other in parks {
-                guard !assigned.contains(other.id) else { continue }
-                if abs(park.latitude - other.latitude) < threshold &&
-                   abs(park.longitude - other.longitude) < threshold {
                     cluster.append(other)
                     assigned.insert(other.id)
                 }
@@ -381,11 +291,127 @@ class MapViewModel: ObservableObject {
         return clusters
     }
 
-    func centerCoordinate(of cluster: [Skatepark]) -> CLLocationCoordinate2D {
+//MARK: - LOCATION OF COMBINED PIN
+    func centerCoordinate(of cluster: [MapPin]) -> CLLocationCoordinate2D {
         let avgLat = cluster.map { $0.latitude }.reduce(0, +) / Double(cluster.count)
         let avgLon = cluster.map { $0.longitude }.reduce(0, +) / Double(cluster.count)
         return CLLocationCoordinate2D(latitude: avgLat, longitude: avgLon)
     }
+    
+// MARK: - CLUSTER BUBBLE UI
+    struct ClusterBubble: View {
+        let count: Int
+        @State private var scale: CGFloat = 0.0
+
+        var body: some View {
+            ZStack {
+                Circle()
+                    .fill(.ultraThinMaterial)
+                    .frame(width: 44, height: 44)
+                    .overlay(
+                        Circle()
+                            .strokeBorder(.white.opacity(0.3), lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
+
+                Text("\(count)")
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+            }
+            .scaleEffect(scale)
+            .onAppear {
+                withAnimation(.spring(duration: 0.4, bounce: 0.3)) {
+                    scale = 1.0
+                }
+            }
+        }
+    }
+
+// MARK: - USER PIN UI
+    struct PinMarker: View {
+        let action: () -> Void
+        @State private var scale: CGFloat = 0.0
+
+        var body: some View {
+            Button(action: action) {
+                VStack(spacing: 0) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.darkblue)
+                            .frame(width: 34, height: 34)
+                            .shadow(color: Color.darkblue.opacity(0.4), radius: 4, y: 2)
+
+                        Image(systemName: "skateboard.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.white)
+                    }
+
+                    // Pin tail
+                    Triangle()
+                        .fill(Color.darkblue)
+                        .frame(width: 12, height: 8)
+                        .offset(y: -1)
+                }
+            }
+            .buttonStyle(.plain)
+            .scaleEffect(scale)
+            .onAppear {
+                withAnimation(.spring(duration: 0.4, bounce: 0.3)) {
+                    scale = 1.0
+                }
+            }
+        }
+    }
+
+// MARK: - SKATEPARK PIN UI
+    struct SkateparkMarker: View {
+        let action: () -> Void
+        @State private var scale: CGFloat = 0.0
+
+        var body: some View {
+            Button(action: action) {
+                VStack(spacing: 0) {
+                    ZStack {
+                        Circle()
+                            .fill(.darkgreen)
+                            .frame(width: 34, height: 34)
+                            .shadow(color: .green.opacity(0.4), radius: 4, y: 2)
+
+                        Image(systemName: "figure.skating")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.white)
+                    }
+
+                    // Pin tail
+                    Triangle()
+                        .fill(.darkgreen)
+                        .frame(width: 12, height: 8)
+                        .offset(y: -1)
+                }
+            }
+            .buttonStyle(.plain)
+            .scaleEffect(scale)
+            .onAppear {
+                withAnimation(.spring(duration: 0.4, bounce: 0.3)) {
+                    scale = 1.0
+                }
+            }
+        }
+    }
+
+// MARK: - Pin Tail Shape
+    struct Triangle: Shape {
+        func path(in rect: CGRect) -> Path {
+            var path = Path()
+            path.move(to: CGPoint(x: rect.midX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+            path.closeSubpath()
+            return path
+        }
+    }
+
+
 
 //MARK: - PLACEMENT PIN(WHEN CHOOSING A SPOT)
     struct CircularTextPin: View {

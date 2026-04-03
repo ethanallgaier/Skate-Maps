@@ -12,7 +12,6 @@ struct CollectionDetailView: View {
     @ObservedObject var viewModel: MapViewModel
 
     @State private var selectedPin: PinInfo?
-    @State private var showPinDetail = false
     @Namespace private var pinTransition
     @Environment(\.dismiss) var dismiss
 
@@ -23,7 +22,6 @@ struct CollectionDetailView: View {
                     ForEach(collection.pins) { pin in
                         Button {
                             selectedPin = pin
-                            showPinDetail = true
                         } label: {
                             PinListRow(pin: pin)
                         }
@@ -41,11 +39,9 @@ struct CollectionDetailView: View {
                     Button("Done") { dismiss() }
                 }
             }
-            .fullScreenCover(isPresented: $showPinDetail) {
-                if let pin = selectedPin {
-                    PinInfoView(pin: pin, viewModel: viewModel)
-                        .navigationTransition(.zoom(sourceID: pin.id, in: pinTransition))
-                }
+            .fullScreenCover(item: $selectedPin) { pin in
+                PinInfoView(pin: pin, viewModel: viewModel)
+                    .navigationTransition(.zoom(sourceID: pin.id, in: pinTransition))
             }
         }
     }

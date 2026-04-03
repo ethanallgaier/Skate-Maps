@@ -24,7 +24,6 @@ struct DiscoveryView: View {
     @ObservedObject var locationManager: LocationManager
 
     @State private var selectedPin: PinInfo?
-    @State private var showPinDetail = false
     @State private var selectedCollection: CuratedCollection?
     @Namespace private var pinTransition
 
@@ -127,7 +126,6 @@ struct DiscoveryView: View {
                         sectionHeader("Spot of the Day", icon: "sparkles")
                         SpotOfTheDayCard(pin: spot, viewModel: viewModel) {
                             selectedPin = spot
-                            showPinDetail = true
                         }
                         .matchedTransitionSource(id: spot.id, in: pinTransition)
                         .padding(.horizontal)
@@ -162,11 +160,9 @@ struct DiscoveryView: View {
                 .padding(.top, 8)
             }
             .navigationTitle("Discover")
-            .fullScreenCover(isPresented: $showPinDetail) {
-                if let pin = selectedPin {
-                    PinInfoView(pin: pin, viewModel: viewModel)
-                        .navigationTransition(.zoom(sourceID: pin.id, in: pinTransition))
-                }
+            .fullScreenCover(item: $selectedPin) { pin in
+                PinInfoView(pin: pin, viewModel: viewModel)
+                    .navigationTransition(.zoom(sourceID: pin.id, in: pinTransition))
             }
             .sheet(item: $selectedCollection) { collection in
                 CollectionDetailView(collection: collection, viewModel: viewModel)
@@ -195,7 +191,6 @@ struct DiscoveryView: View {
                         distance: showDistance ? locationManager.distance(to: pin.coordinate) : nil
                     ) {
                         selectedPin = pin
-                        showPinDetail = true
                     }
                     .matchedTransitionSource(id: pin.id, in: pinTransition)
                 }

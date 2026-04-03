@@ -19,8 +19,6 @@ struct MapView: View {
     @Namespace private var pinTransition
     @State private var ignoreNextCameraChange = false
     
-    //track the camera
-    @State private var position: MapCameraPosition = .automatic
     @State private var currentRegion: MKCoordinateRegion = MKCoordinateRegion()
     
     var filteredPins: [PinInfo] {
@@ -33,31 +31,38 @@ struct MapView: View {
         }
     }
 
-    /// Pre-computed skatepark clusters, capped at 30 to keep Map responsive
-    var visibleSkateparkClusters: [[Skatepark]] {
-        guard viewModel.showSkateparks, !viewModel.skateparks.isEmpty else { return [] }
+    /// All pins (user + skateparks) unified and clustered, capped at 50
+    var unifiedClusters: [[MapPin]] {
         guard currentRegion.span.latitudeDelta > 0.0001 else { return [] }
 
-        // Only include parks within the visible region (+10% buffer)
-        let halfLat = currentRegion.span.latitudeDelta / 2 * 1.1
-        let halfLon = currentRegion.span.longitudeDelta / 2 * 1.1
-        let visibleParks = viewModel.skateparks.filter { park in
-            abs(park.latitude - currentRegion.center.latitude) <= halfLat &&
-            abs(park.longitude - currentRegion.center.longitude) <= halfLon
+        var allPins: [MapPin] = filteredPins.compactMap { pin in
+            guard pin.id != nil else { return nil }
+            return .userPin(pin)
         }
-        guard !visibleParks.isEmpty else { return [] }
 
-        let clusters = viewModel.clusteredSkateparks(for: currentRegion, from: visibleParks)
-        guard clusters.count > 30 else { return clusters }
+        if viewModel.showSkateparks, !viewModel.skateparks.isEmpty {
+            let halfLat = currentRegion.span.latitudeDelta / 2 * 1.1
+            let halfLon = currentRegion.span.longitudeDelta / 2 * 1.1
+            let visibleParks = viewModel.skateparks.filter { park in
+                abs(park.latitude - currentRegion.center.latitude) <= halfLat &&
+                abs(park.longitude - currentRegion.center.longitude) <= halfLon
+            }
+            allPins += visibleParks.map { .skatepark($0) }
+        }
+
+        guard !allPins.isEmpty else { return [] }
+
+        let clusters = viewModel.clusteredMapPins(for: currentRegion, from: allPins)
+        guard clusters.count > 50 else { return clusters }
 
         let center = currentRegion.center
         return Array(clusters.sorted { a, b in
-            let aCenter = a.first!
-            let bCenter = b.first!
-            let aDist = abs(aCenter.latitude - center.latitude) + abs(aCenter.longitude - center.longitude)
-            let bDist = abs(bCenter.latitude - center.latitude) + abs(bCenter.longitude - center.longitude)
+            let aPin = a.first!
+            let bPin = b.first!
+            let aDist = abs(aPin.latitude - center.latitude) + abs(aPin.longitude - center.longitude)
+            let bDist = abs(bPin.latitude - center.latitude) + abs(bPin.longitude - center.longitude)
             return aDist < bDist
-        }.prefix(30))
+        }.prefix(50))
     }
     
     // MARK: - Main
@@ -67,26 +72,41 @@ struct MapView: View {
             // MARK: -  MAP
             Map(position: $cameraPosition) {
                 UserAnnotation()//forogt what this is
-                //Each pin
-                ForEach(viewModel.clusteredPins(for: currentRegion, from: filteredPins), id: \.first?.id) { cluster in
-                    if cluster.count == 1, let pin = cluster.first {
-                        // SINGLE PIN
-                        Annotation(pin.pinName, coordinate: pin.coordinate) {
-                            MapViewModel.PinMarker {
-                                selectedPin = pin
-                                ignoreNextCameraChange = true
-                                withAnimation(.spring) {
-                                    cameraPosition = .region(MKCoordinateRegion(
-                                        center: pin.coordinate,
-                                        span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
-                                    ))
+                // MARK: - Unified Pin Annotations
+                ForEach(unifiedClusters, id: \.first?.id) { cluster in
+                    if cluster.count == 1, let item = cluster.first {
+                        switch item {
+                        case .userPin(let pin):
+                            Annotation(pin.pinName, coordinate: pin.coordinate) {
+                                MapViewModel.PinMarker {
+                                    selectedPin = pin
+                                    ignoreNextCameraChange = true
+                                    withAnimation(.spring) {
+                                        cameraPosition = .region(MKCoordinateRegion(
+                                            center: pin.coordinate,
+                                            span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
+                                        ))
+                                    }
+                                }
+                            }
+                        case .skatepark(let park):
+                            Annotation(park.name, coordinate: park.coordinate) {
+                                MapViewModel.SkateparkMarker {
+                                    selectedPin = nil
+                                    selectedSkatepark = park
+                                    viewModel.resolveNameIfNeeded(for: park)
+                                    ignoreNextCameraChange = true
+                                    withAnimation(.spring) {
+                                        cameraPosition = .region(MKCoordinateRegion(
+                                            center: park.coordinate,
+                                            span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
+                                        ))
+                                    }
                                 }
                             }
                         }
                     } else if cluster.first != nil {
-                        
                         let center = viewModel.centerCoordinate(of: cluster)
-//COMBINED PINS
                         Annotation("", coordinate: center) {
                             Button {
                                 ignoreNextCameraChange = true
@@ -101,45 +121,6 @@ struct MapView: View {
                                 }
                             } label: {
                                 MapViewModel.ClusterBubble(count: cluster.count)
-                            }
-                            
-                        }
-                    }
-                }
-
-                // MARK: - Skatepark Annotations (Clustered, max 30)
-                ForEach(visibleSkateparkClusters, id: \.first?.id) { cluster in
-                    if cluster.count == 1, let park = cluster.first {
-                        Annotation(park.name, coordinate: park.coordinate) {
-                            MapViewModel.SkateparkMarker {
-                                selectedPin = nil
-                                selectedSkatepark = park
-                                viewModel.resolveNameIfNeeded(for: park)
-                                ignoreNextCameraChange = true
-                                withAnimation(.spring) {
-                                    cameraPosition = .region(MKCoordinateRegion(
-                                        center: park.coordinate,
-                                        span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
-                                    ))
-                                }
-                            }
-                        }
-                    } else if cluster.first != nil {
-                        let center = viewModel.centerCoordinate(of: cluster)
-                        Annotation("", coordinate: center) {
-                            Button {
-                                ignoreNextCameraChange = true
-                                withAnimation(.spring) {
-                                    cameraPosition = .region(MKCoordinateRegion(
-                                        center: center,
-                                        span: MKCoordinateSpan(
-                                            latitudeDelta: currentRegion.span.latitudeDelta * 0.4,
-                                            longitudeDelta: currentRegion.span.longitudeDelta * 0.4
-                                        )
-                                    ))
-                                }
-                            } label: {
-                                MapViewModel.SkateparkClusterBubble(count: cluster.count)
                             }
                         }
                     }
@@ -192,9 +173,11 @@ struct MapView: View {
             ZStack(alignment: .bottomTrailing) {
                     Color.clear
                     VStack(spacing: 8) {
+                       
+                        addPinButton
+                       
                         skateparkToggle
                         locationButton
-                        addPinButton
                     }
                     .padding(.trailing)
                     .padding(.bottom, (selectedPin != nil || selectedSkatepark != nil) ? 140 : 40)
@@ -353,9 +336,11 @@ struct MapView: View {
             Image(systemName: "location.fill")
                 .foregroundStyle(.white)
                 .bold()
-                .frame(width: 30, height: 40)
+                .frame(width: 55, height: 55)
+                .contentShape(Rectangle())
         }
-        .buttonStyle(.glassProminent)
+        .buttonStyle(.plain)
+        .glassEffect()
     }
     
     
@@ -367,9 +352,11 @@ struct MapView: View {
             Image(systemName: "plus")
                 .foregroundStyle(.white)
                 .bold()
-                .frame(width: 30, height: 40)
+                .frame(width: 55, height: 55)
+                .contentShape(Rectangle())
         }
-        .buttonStyle(.glassProminent)
+        .buttonStyle(.plain)
+        .glassEffect()
     }
 
     // MARK: - SKATEPARK TOGGLE BUTTON
@@ -387,14 +374,16 @@ struct MapView: View {
                     ProgressView()
                         .tint(.white)
                 } else {
-                    Image(systemName: viewModel.showSkateparks ? "figure.skating" : "figure.skating")
+                    Image(systemName: "figure.skating")
                         .foregroundStyle(viewModel.showSkateparks ? .white : .gray)
                         .bold()
                 }
             }
-            .frame(width: 30, height: 40)
+            .frame(width: 55, height: 55)
+            .contentShape(Rectangle())
         }
-        .buttonStyle(.glassProminent)
+        .buttonStyle(.plain)
+        .glassEffect()
     }
 
     // MARK: - SKATEPARK PREVIEW CARD

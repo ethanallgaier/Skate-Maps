@@ -25,6 +25,10 @@ final class ImageCache {
     func set(_ image: UIImage, for key: String) {
         cache.setObject(image, forKey: key as NSString)
     }
+
+    func remove(for key: String) {
+        cache.removeObject(forKey: key as NSString)
+    }
 }
 
 // MARK: - Cached Async Image
@@ -50,6 +54,14 @@ struct CachedAsyncImage<Placeholder: View>: View {
             } else {
                 placeholder()
                     .onAppear { loadImage() }
+            }
+        }
+        .onChange(of: url) { _, newURL in
+            // Reset and reload when URL changes
+            image = nil
+            isLoading = false
+            if newURL != nil {
+                loadImage()
             }
         }
     }

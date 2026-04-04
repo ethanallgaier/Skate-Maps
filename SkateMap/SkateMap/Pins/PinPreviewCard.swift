@@ -24,12 +24,12 @@ struct PinPreviewCard: View {
                 CachedAsyncImage(url: URL(string: firstImage)) {
                     ProgressView()
                 }
-                .frame(width: 72, height: 82)
+                .frame(width: 82, height: 82)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
             } else {
                 RoundedRectangle(cornerRadius: 14)
                     .fill(Color(.systemGray5))
-                    .frame(width: 72, height: 82)
+                    .frame(width: 82, height: 82)
                     .overlay(
                         Image(systemName: "figure.skateboarding")
                             .font(.system(size: 24))

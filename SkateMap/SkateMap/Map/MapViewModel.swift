@@ -109,6 +109,41 @@ class MapViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Location Name Cache (reverse geocoding)
+    @Published var locationNameCache: [String: String] = [:]
+    private var locationFetchingKeys: Set<String> = []
+
+    func locationName(for pin: PinInfo) -> String? {
+        let key = "\(pin.latitude),\(pin.longitude)"
+        if let cached = locationNameCache[key] {
+            return cached
+        }
+        guard !locationFetchingKeys.contains(key) else { return nil }
+        locationFetchingKeys.insert(key)
+        Task {
+            let location = CLLocation(latitude: pin.latitude, longitude: pin.longitude)
+            guard let request = MKReverseGeocodingRequest(location: location) else { return }
+            do {
+                let items = try await request.mapItems
+                if let item = items.first,
+                   let city = item.addressRepresentations?.cityWithContext(.short) {
+                    await MainActor.run {
+                        self.locationNameCache[key] = city
+                    }
+                } else {
+                    await MainActor.run {
+                        self.locationNameCache[key] = "Unknown"
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.locationNameCache[key] = "Unknown"
+                }
+            }
+        }
+        return nil
+    }
+
     // MARK: - Username Cache (live lookup by UID)
     @Published var usernameCache: [String: String] = [:]
     @Published var profilePictureCache: [String: String] = [:]

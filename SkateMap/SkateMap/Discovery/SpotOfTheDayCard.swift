@@ -12,12 +12,10 @@ struct SpotOfTheDayCard: View {
     @ObservedObject var viewModel: MapViewModel
     let onTap: () -> Void
 
-    @State private var isPressed = false
-
     var body: some View {
         Button(action: onTap) {
             ZStack(alignment: .bottomLeading) {
-                // Background image or placeholder
+                // Background image or placeholder — always fills
                 Group {
                     if let firstURL = pin.imageURls.first, let url = URL(string: firstURL) {
                         CachedAsyncImage(url: url) {
@@ -42,11 +40,11 @@ struct SpotOfTheDayCard: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Spacer()
 
-                    // Spot type badges
+                    // Spot type badges (text only, no icons)
                     HStack(spacing: 6) {
                         ForEach(pin.spotTypes, id: \.self) { type in
                             Text(type.rawValue)
-                                .font(.caption2.bold())
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
@@ -55,30 +53,43 @@ struct SpotOfTheDayCard: View {
                     }
 
                     Text(pin.pinName)
-                        .font(.title2.bold())
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .lineLimit(1)
 
                     HStack(spacing: 10) {
-                        Label(viewModel.username(for: pin.createdByUID), systemImage: "person.circle")
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.85))
+                        HStack(spacing: 5) {
+                            if let picURL = viewModel.profilePicture(for: pin.createdByUID),
+                               let url = URL(string: picURL) {
+                                CachedAsyncImage(url: url) {
+                                    Image(systemName: "person.circle.fill")
+                                        .font(.system(size: 16))
+                                        .foregroundStyle(.white.opacity(0.6))
+                                }
+                                .frame(width: 18, height: 18)
+                                .clipShape(Circle())
+                            } else {
+                                Image(systemName: "person.circle.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(.white.opacity(0.6))
+                            }
+                            Text(viewModel.username(for: pin.createdByUID))
+                                .font(.system(size: 13, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.85))
+                        }
 
                         if pin.averageRating > 0 {
                             HStack(spacing: 3) {
                                 Image(systemName: "star.fill")
                                 Text(String(format: "%.1f", pin.averageRating))
                             }
-                            .font(.caption.bold())
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
                             .foregroundStyle(.yellow)
                         }
 
-                        HStack(spacing: 3) {
-                            Image(systemName: pin.riskLevel.icon)
-                            Text(pin.riskLevel.label)
-                        }
-                        .font(.caption2.bold())
-                        .foregroundStyle(pin.riskLevel.color)
+                        Text(pin.riskLevel.label)
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(pin.riskLevel.color)
                     }
                 }
                 .padding(20)

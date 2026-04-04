@@ -137,7 +137,7 @@ struct DiscoveryView: View {
                     if !nearMeSpots.isEmpty {
                         sectionHeader("Near Me", icon: "location.fill")
                             .sectionAppear(appeared: appeared, delay: 0.12)
-                        horizontalCards(nearMeSpots, showDistance: true)
+                        horizontalCards(nearMeSpots, showDistance: true, showDate: false, showRating: false)
                             .sectionAppear(appeared: appeared, delay: 0.16)
                     }
 
@@ -145,7 +145,7 @@ struct DiscoveryView: View {
                     if !newSpots.isEmpty {
                         sectionHeader("New Spots", icon: "clock.badge")
                             .sectionAppear(appeared: appeared, delay: 0.22)
-                        horizontalCards(newSpots, showDistance: false)
+                        horizontalCards(newSpots, showDistance: false, showDate: true)
                             .sectionAppear(appeared: appeared, delay: 0.26)
                     }
 
@@ -153,7 +153,7 @@ struct DiscoveryView: View {
                     if !trendingSpots.isEmpty {
                         sectionHeader("Trending", icon: "flame.fill")
                             .sectionAppear(appeared: appeared, delay: 0.32)
-                        horizontalCards(trendingSpots, showDistance: false)
+                        horizontalCards(trendingSpots, showDistance: false, showDate: false)
                             .sectionAppear(appeared: appeared, delay: 0.36)
                     }
 
@@ -191,22 +191,25 @@ struct DiscoveryView: View {
     private func sectionHeader(_ title: String, icon: String) -> some View {
         HStack(spacing: 7) {
             Image(systemName: icon)
-                .font(.subheadline.weight(.semibold))
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundStyle(.blue)
             Text(title)
-                .font(.title3.bold())
+                .font(.system(size: 20, weight: .bold, design: .rounded))
         }
         .padding(.horizontal)
         .padding(.top, 4)
     }
 
-    private func horizontalCards(_ pins: [PinInfo], showDistance: Bool) -> some View {
+    private func horizontalCards(_ pins: [PinInfo], showDistance: Bool, showDate: Bool, showRating: Bool = true) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 14) {
                 ForEach(pins) { pin in
                     SpotCard(
                         pin: pin,
-                        distance: showDistance ? locationManager.distance(to: pin.coordinate) : nil
+                        viewModel: viewModel,
+                        distance: showDistance ? locationManager.distance(to: pin.coordinate) : nil,
+                        showDate: showDate,
+                        showRating: showRating
                     ) {
                         selectedPin = pin
                     }

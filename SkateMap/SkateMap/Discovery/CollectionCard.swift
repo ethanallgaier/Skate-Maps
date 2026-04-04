@@ -22,29 +22,30 @@ struct CollectionCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: collection.icon)
-                .font(.title3)
-                .foregroundStyle(accentColor)
-                .padding(.bottom, 2)
+            HStack {
+                Image(systemName: collection.icon)
+                    .font(.title3)
+                    .foregroundStyle(accentColor)
+                Spacer()
+                Text("\(collection.pins.count)")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(accentColor)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(accentColor.opacity(0.12), in: Capsule())
+            }
+
+            Spacer(minLength: 0)
 
             Text(collection.title)
-                .font(.subheadline.bold())
+                .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
                 .lineLimit(1)
 
             Text(collection.subtitle)
-                .font(.caption)
+                .font(.system(size: 12, design: .rounded))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
-
-            Spacer(minLength: 0)
-
-            Text("\(collection.pins.count) spots")
-                .font(.caption2.bold())
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(accentColor.opacity(0.15), in: Capsule())
-                .foregroundStyle(accentColor)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(minHeight: 120)

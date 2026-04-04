@@ -133,13 +133,19 @@ class AuthService {
             return
         }
         print("✅ Starting upload for UID: \(uid)")
+
+        // Clear the old image from cache before uploading the new one
+        if let oldURL = currentUser?.profilePicture, !oldURL.isEmpty {
+            ImageCache.shared.remove(for: oldURL)
+        }
+
         let path = "profile_images/\(uid)_\(Date().timeIntervalSince1970)"
         let url = try await ImageUploader.upload(image: image, path: path)
         print("✅ Image uploaded, URL: \(url)")
         try await db.collection("users").document(uid).updateData(["profilePicture": url])
         print("✅ Firestore updated")
         URLCache.shared.removeAllCachedResponses()
-        await fetchUser(uid: uid) // ✅ re-fetch instead of manually rebuilding
+        await fetchUser(uid: uid)
         await MainActor.run { profileRefreshID = UUID() }
         print("✅ currentUser after fetch: \(currentUser?.profilePicture ?? "nil")")
     }

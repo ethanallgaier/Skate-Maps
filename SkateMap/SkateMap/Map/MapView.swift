@@ -424,8 +424,8 @@ struct MapView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(park.name)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(.green)
                         .lineLimit(2)
                     HStack(spacing: 8) {
                         if let surface = park.surface {
@@ -437,8 +437,8 @@ struct MapView: View {
                                 .background(.green.opacity(0.15), in: Capsule())
                         }
                         Text("Tap for directions")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.green)
                     }
                 }
 

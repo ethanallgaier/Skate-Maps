@@ -24,12 +24,6 @@ struct StarRatingView: View {
                         onRate(star)
                     }
             }
-            if rating > 0 {
-                Text(String(format: "%.1f", rating))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Text("(\(Int(rating * 10) / 10 == 0 ? 1 : 1))") // placeholder
-            }
         }
     }
 

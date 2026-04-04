@@ -111,27 +111,37 @@ class MapViewModel: ObservableObject {
 
     // MARK: - Username Cache (live lookup by UID)
     @Published var usernameCache: [String: String] = [:]
+    @Published var profilePictureCache: [String: String] = [:]
 
     func username(for uid: String) -> String {
         if let cached = usernameCache[uid] {
             return cached
         }
-        // Kick off a fetch if we haven't yet
-        Task { await fetchUsername(for: uid) }
+        Task { await fetchUserInfo(for: uid) }
         return "..."
     }
 
-    private func fetchUsername(for uid: String) async {
-        // Don't re-fetch if already cached
+    func profilePicture(for uid: String) -> String? {
+        if let cached = profilePictureCache[uid] {
+            return cached.isEmpty ? nil : cached
+        }
+        Task { await fetchUserInfo(for: uid) }
+        return nil
+    }
+
+    private func fetchUserInfo(for uid: String) async {
         guard usernameCache[uid] == nil else { return }
         do {
             let doc = try await dataBase.collection("users").document(uid).getDocument()
-            let name = doc.data()?["username"] as? String ?? "Unknown"
+            let data = doc.data()
+            let name = data?["username"] as? String ?? "Unknown"
+            let pic = data?["profilePicture"] as? String ?? ""
             await MainActor.run {
                 self.usernameCache[uid] = name
+                self.profilePictureCache[uid] = pic
             }
         } catch {
-            print("Error fetching username for \(uid): \(error)")
+            print("Error fetching user info for \(uid): \(error)")
         }
     }
 
@@ -199,7 +209,7 @@ class MapViewModel: ObservableObject {
     }
     
 //MARK: - ADD PIN TO SKATEMAPS
-    func addPin(name: String, details: String, coordinate: CLLocationCoordinate2D, username: String, images: [UIImage] = [], spotTypes: [SpotType] = [.other], riskLevel: RiskLevel = .low, difficultyLevel: DifficultyLevel = .beginner) async {
+    func addPin(name: String, details: String, coordinate: CLLocationCoordinate2D, username: String, images: [UIImage] = [], spotTypes: [SpotType] = [.other], riskLevel: RiskLevel = .low, difficultyLevel: DifficultyLevel = .beginner, surfaceQuality: SurfaceQuality = .decent, bestTimes: [BestTime] = []) async {
         guard let uid = Auth.auth().currentUser?.uid else {
             print("No user logged in!")
             return
@@ -230,7 +240,9 @@ class MapViewModel: ObservableObject {
             imageURls: uploadedURLs,
             spotTypes: spotTypes,
             riskLevel: riskLevel,
-            difficultyLevel: difficultyLevel
+            difficultyLevel: difficultyLevel,
+            surfaceQuality: surfaceQuality,
+            bestTimes: bestTimes
         )
 
         do {
@@ -498,21 +510,76 @@ class MapViewModel: ObservableObject {
               let uid = Auth.auth().currentUser?.uid else { return }
         do {
             try await dataBase.collection("pins").document(pinID).updateData([
-                "ratings.\(uid)": stars  // ✅ stores as ratings.uid = stars in Firestore
+                "ratings.\(uid)": stars
             ])
         } catch {
             print("❌ Error rating pin: \(error)")
         }
     }
+
+    func removeRating(_ pin: PinInfo) async {
+        guard let pinID = pin.id,
+              let uid = Auth.auth().currentUser?.uid else { return }
+        do {
+            try await dataBase.collection("pins").document(pinID).updateData([
+                "ratings.\(uid)": FieldValue.delete()
+            ])
+        } catch {
+            print("❌ Error removing rating: \(error)")
+        }
+    }
+    // MARK: - COMMENTS
+
+    func fetchComments(for pin: PinInfo) async -> [Comment] {
+        guard let pinID = pin.id else { return [] }
+        do {
+            let snapshot = try await dataBase.collection("pins").document(pinID)
+                .collection("comments")
+                .order(by: "time", descending: true)
+                .getDocuments()
+            return snapshot.documents.compactMap { try? $0.data(as: Comment.self) }
+        } catch {
+            print("❌ Error fetching comments: \(error)")
+            return []
+        }
+    }
+
+    func addComment(to pin: PinInfo, text: String, username: String) async {
+        guard let pinID = pin.id,
+              let uid = Auth.auth().currentUser?.uid else { return }
+        let comment = Comment(text: text, authorUID: uid, authorUsername: username, time: Date())
+        do {
+            try dataBase.collection("pins").document(pinID)
+                .collection("comments")
+                .addDocument(from: comment)
+        } catch {
+            print("❌ Error adding comment: \(error)")
+        }
+    }
+
+    func deleteComment(from pin: PinInfo, commentID: String) async {
+        guard let pinID = pin.id else { return }
+        do {
+            try await dataBase.collection("pins").document(pinID)
+                .collection("comments")
+                .document(commentID)
+                .delete()
+        } catch {
+            print("❌ Error deleting comment: \(error)")
+        }
+    }
+
     //MARK: -   UPDATE/EDIT
-    func updatePin(_ pin: PinInfo, name: String, details: String, spotTypes: [SpotType], riskLevel: RiskLevel, difficultyLevel: DifficultyLevel) async {
+    func updatePin(_ pin: PinInfo, name: String, details: String, spotTypes: [SpotType], riskLevel: RiskLevel, difficultyLevel: DifficultyLevel, surfaceQuality: SurfaceQuality = .decent, bestTimes: [BestTime] = []) async {
         guard let id = pin.id else { return }
         try? await Firestore.firestore().collection("pins").document(id).updateData([
             "pinName": name,
             "pinDetails": details,
             "spotTypes": spotTypes.map { $0.rawValue },
             "riskLevel": riskLevel.rawValue,
-            "difficultyLevel": difficultyLevel.rawValue
+            "difficultyLevel": difficultyLevel.rawValue,
+            "surfaceQuality": surfaceQuality.rawValue,
+            "bestTimes": bestTimes.map { $0.rawValue }
         ])
     }
     //MARK: - DELETE PHOTO

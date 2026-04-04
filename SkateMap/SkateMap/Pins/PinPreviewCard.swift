@@ -14,69 +14,111 @@ struct PinPreviewCard: View {
     var onTap: () -> Void
     var onDismiss: () -> Void
 
+    @State private var showUserProfile = false
+
     var body: some View {
-        Button {
-            onTap()
-        } label: {
-            HStack(spacing: 12) {
+        HStack(spacing: 16) {
 
-                // Photo or placeholder
-                if let firstImage = pin.imageURls.first {
-                    CachedAsyncImage(url: URL(string: firstImage)) {
-                        ProgressView()
-                    }
-                    .frame(width: 70, height: 70)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                } else {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(.gray.opacity(0.3))
-                        .frame(width: 70, height: 70)
-                        .overlay(
-                            Image(systemName: "photo")
-                                .foregroundStyle(.secondary)
-                        )
+            // Photo or placeholder
+            if let firstImage = pin.imageURls.first {
+                CachedAsyncImage(url: URL(string: firstImage)) {
+                    ProgressView()
                 }
-
-                // Spot info
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(viewModel.username(for: pin.createdByUID))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(pin.pinName)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-
-                    HStack(spacing: 8) {
-                        // Spot types
-//                        HStack(spacing: 4) {
-//                            ForEach(pin.spotTypes, id: \.self) { type in
-//                                Label(type.rawValue, systemImage: type.icon)
-//                                    .font(.caption)
-//                                    .foregroundStyle(.secondary)
-//                            }
-//                        }
-
-                        // Risk badge
-                        HStack(spacing: 3) {
-                            Image(systemName: pin.difficultyLevel.icon)
-                            Text(pin.difficultyLevel.label)
-                        }
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(pin.difficultyLevel.color)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(pin.difficultyLevel.color.opacity(0.15), in: Capsule())
-                    }
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .foregroundStyle(.secondary)
+                .frame(width: 72, height: 82)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+            } else {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color(.systemGray5))
+                    .frame(width: 72, height: 82)
+                    .overlay(
+                        Image(systemName: "figure.skateboarding")
+                            .font(.system(size: 24))
+                            .foregroundStyle(.secondary.opacity(0.5))
+                    )
             }
-            .padding()
-            .glassEffect(in: .rect(cornerRadius: 16))
-            .padding(.horizontal)
+
+            // Spot info
+            VStack(alignment: .leading, spacing: 8) {
+                // Name + stars
+                HStack(spacing: 8) {
+                    Text(pin.pinName)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+
+                    if pin.averageRating > 0 {
+                        HStack(spacing: 2) {
+                            ForEach(1...5, id: \.self) { star in
+                                Image(systemName: Double(star) <= pin.averageRating ? "star.fill" : Double(star) - pin.averageRating < 1 ? "star.leadinghalf.filled" : "star")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.yellow)
+                            }
+                        }
+                    }
+                }
+
+                // Username — tappable to view profile
+                Button {
+                    showUserProfile = true
+                } label: {
+                    HStack(spacing: 5) {
+                        if let picURL = viewModel.profilePicture(for: pin.createdByUID) {
+                            CachedAsyncImage(url: URL(string: picURL)) {
+                                Image(systemName: "person.circle.fill")
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .frame(width: 16, height: 16)
+                            .clipShape(Circle())
+                        } else {
+                            Image(systemName: "person.circle.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.tertiary)
+                        }
+                        Text(viewModel.username(for: pin.createdByUID))
+                            .font(.system(size: 12))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                // Badges
+                HStack(spacing: 6) {
+                    Text(pin.difficultyLevel.label)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(pin.difficultyLevel.color)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(pin.difficultyLevel.color.opacity(0.12), in: Capsule())
+
+                    if let firstType = pin.spotTypes.first, firstType != .other {
+                        Text(firstType.rawValue)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color(.systemGray5), in: Capsule())
+                    }
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary.opacity(0.5))
+        }
+        .padding(16)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap()
+        }
+        .glassEffect(in: .rect(cornerRadius: 18))
+        .padding(.horizontal)
+        .sheet(isPresented: $showUserProfile) {
+            NavigationStack {
+                UserProfileView(userID: pin.createdByUID, viewModel: viewModel)
+            }
         }
     }
 }

@@ -26,6 +26,8 @@ struct AddPinView: View {
     @State private var selectedTypes: Set<SpotType> = []
     @State private var selectedRiskLevel: RiskLevel = .low
     @State private var selectedDifficulty: DifficultyLevel = .beginner
+    @State private var selectedSurface: SurfaceQuality = .decent
+    @State private var selectedBestTimes: Set<BestTime> = []
     @State private var coordinate: CLLocationCoordinate2D?
     @State private var locationName: String?
     @State private var showLocationPicker = false
@@ -76,72 +78,174 @@ struct AddPinView: View {
 
                 // Spot type — multi-select
                 Section("Spot Type") {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(SpotType.allCases, id: \.self) { type in
-                                Button {
-                                    if selectedTypes.contains(type) {
-                                        selectedTypes.remove(type)
-                                    } else {
-                                        selectedTypes.insert(type)
-                                    }
-                                } label: {
-                                    Label(type.rawValue, systemImage: type.icon)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                        .background(selectedTypes.contains(type) ? Color.black : Color.gray.opacity(0.2))
-                                        .foregroundStyle(selectedTypes.contains(type) ? .white : .primary)
-                                        .clipShape(Capsule())
+                    FlowLayout(spacing: 8) {
+                        ForEach(SpotType.allCases, id: \.self) { type in
+                            Button {
+                                if selectedTypes.contains(type) {
+                                    selectedTypes.remove(type)
+                                } else {
+                                    selectedTypes.insert(type)
                                 }
+                            } label: {
+                                Text(type.rawValue)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
+                                    .background(selectedTypes.contains(type) ? Color.blue : Color(.systemGray5))
+                                    .foregroundStyle(selectedTypes.contains(type) ? .white : .primary)
+                                    .clipShape(Capsule())
                             }
+                            .buttonStyle(.plain)
                         }
-                        .padding(.vertical, 4)
                     }
+                    .padding(.vertical, 4)
                 }
 
-                // Risk level — segmented picker
-                Section("Risk Level") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("How likely are you to get kicked out?")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        Picker("Risk", selection: $selectedRiskLevel) {
-                            ForEach(RiskLevel.allCases, id: \.self) { level in
-                                Text(level.label).tag(level)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-
-                        HStack {
-                            Image(systemName: selectedRiskLevel.icon)
-                            Text(selectedRiskLevel.label)
-                                .font(.subheadline.weight(.medium))
-                        }
-                        .foregroundStyle(selectedRiskLevel.color)
-                    }
-                }
-
-                // Difficulty level — segmented picker
+                // Difficulty level
                 Section("Difficulty") {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("How hard is this spot to skate?")
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
-                        Picker("Difficulty", selection: $selectedDifficulty) {
+                        HStack(spacing: 8) {
                             ForEach(DifficultyLevel.allCases, id: \.self) { level in
-                                Text(level.label).tag(level)
+                                Button {
+                                    selectedDifficulty = level
+                                } label: {
+                                    VStack(spacing: 6) {
+                                        Image(systemName: level.icon)
+                                            .font(.system(size: 18))
+                                        Text(level.label)
+                                            .font(.system(size: 11, weight: .medium))
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.8)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(selectedDifficulty == level ? level.color.opacity(0.15) : Color(.systemGray6))
+                                    .foregroundStyle(selectedDifficulty == level ? level.color : .secondary)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .strokeBorder(selectedDifficulty == level ? level.color.opacity(0.5) : .clear, lineWidth: 1.5)
+                                    )
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
-                        .pickerStyle(.segmented)
+                    }
+                }
 
-                        HStack {
-                            Image(systemName: selectedDifficulty.icon)
-                            Text(selectedDifficulty.label)
-                                .font(.subheadline.weight(.medium))
+                // Bust Factor
+                Section("Bust Factor") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("How likely are you to get kicked out?")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        HStack(spacing: 8) {
+                            ForEach(RiskLevel.allCases, id: \.self) { level in
+                                Button {
+                                    selectedRiskLevel = level
+                                } label: {
+                                    VStack(spacing: 6) {
+                                        Image(systemName: level.icon)
+                                            .font(.system(size: 18))
+                                        Text(level.label)
+                                            .font(.system(size: 11, weight: .medium))
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.8)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(selectedRiskLevel == level ? level.color.opacity(0.15) : Color(.systemGray6))
+                                    .foregroundStyle(selectedRiskLevel == level ? level.color : .secondary)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .strokeBorder(selectedRiskLevel == level ? level.color.opacity(0.5) : .clear, lineWidth: 1.5)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
-                        .foregroundStyle(selectedDifficulty.color)
+                    }
+                }
+
+                // Surface Quality
+                Section("Surface Quality") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("How smooth is the ground?")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        HStack(spacing: 8) {
+                            ForEach(SurfaceQuality.allCases, id: \.self) { level in
+                                Button {
+                                    selectedSurface = level
+                                } label: {
+                                    VStack(spacing: 6) {
+                                        Image(systemName: level.icon)
+                                            .font(.system(size: 18))
+                                        Text(level.label)
+                                            .font(.system(size: 11, weight: .medium))
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.8)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(selectedSurface == level ? level.color.opacity(0.15) : Color(.systemGray6))
+                                    .foregroundStyle(selectedSurface == level ? level.color : .secondary)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .strokeBorder(selectedSurface == level ? level.color.opacity(0.5) : .clear, lineWidth: 1.5)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+
+                // Best Time to Skate
+                Section("Best Time to Skate") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("When does this spot work best? Select all that apply.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        HStack(spacing: 8) {
+                            ForEach(BestTime.allCases, id: \.self) { time in
+                                Button {
+                                    if selectedBestTimes.contains(time) {
+                                        selectedBestTimes.remove(time)
+                                    } else {
+                                        selectedBestTimes.insert(time)
+                                    }
+                                } label: {
+                                    VStack(spacing: 6) {
+                                        Image(systemName: time.icon)
+                                            .font(.system(size: 18))
+                                        Text(time.rawValue)
+                                            .font(.system(size: 11, weight: .medium))
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.8)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(selectedBestTimes.contains(time) ? time.color.opacity(0.15) : Color(.systemGray6))
+                                    .foregroundStyle(selectedBestTimes.contains(time) ? time.color : .secondary)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .strokeBorder(selectedBestTimes.contains(time) ? time.color.opacity(0.5) : .clear, lineWidth: 1.5)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
                     }
                 }
 
@@ -232,13 +336,15 @@ struct AddPinView: View {
                                     images: images,
                                     spotTypes: Array(selectedTypes),
                                     riskLevel: selectedRiskLevel,
-                                    difficultyLevel: selectedDifficulty
+                                    difficultyLevel: selectedDifficulty,
+                                    surfaceQuality: selectedSurface,
+                                    bestTimes: Array(selectedBestTimes)
                                 )
                                 isSaving = false
                                 dismiss()
                             }
                         }
-                        .disabled(coordinate == nil || pinName.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(isSaving || coordinate == nil || pinName.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                 }
             }

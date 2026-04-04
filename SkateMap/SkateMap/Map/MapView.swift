@@ -318,7 +318,7 @@ struct MapView: View {
                             selectedTypes.insert(type)
                         }
                     } label: {
-                        Label(type.rawValue, systemImage: type.icon)
+                        Text(type.rawValue)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
                             .foregroundStyle(selectedTypes.contains(type) ? .red : .primary)

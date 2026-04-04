@@ -12,6 +12,7 @@ struct CollectionDetailView: View {
     @ObservedObject var viewModel: MapViewModel
 
     @State private var selectedPin: PinInfo?
+    @State private var appeared = false
     @Namespace private var pinTransition
     @Environment(\.dismiss) var dismiss
 
@@ -19,14 +20,20 @@ struct CollectionDetailView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 12) {
-                    ForEach(collection.pins) { pin in
+                    ForEach(Array(collection.pins.enumerated()), id: \.element.id) { index, pin in
                         Button {
                             selectedPin = pin
                         } label: {
                             PinListRow(pin: pin)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(CardPressStyle())
                         .matchedTransitionSource(id: pin.id, in: pinTransition)
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 14)
+                        .animation(
+                            .spring(duration: 0.4, bounce: 0.15).delay(Double(index) * 0.04),
+                            value: appeared
+                        )
                     }
                 }
                 .padding(.horizontal)
@@ -37,6 +44,12 @@ struct CollectionDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
+                }
+            }
+            .onAppear {
+                guard !appeared else { return }
+                withAnimation {
+                    appeared = true
                 }
             }
             .fullScreenCover(item: $selectedPin) { pin in

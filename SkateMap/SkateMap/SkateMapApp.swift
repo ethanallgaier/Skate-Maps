@@ -32,6 +32,7 @@ struct SkateMapApp: App {
     
     @State private var authService: AuthService
     @State private var showSplash = true
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
 
     init() {
         FirebaseApp.configure()
@@ -41,16 +42,24 @@ struct SkateMapApp: App {
     var body: some Scene {
         WindowGroup {
 
-            Group {
+            ZStack {
                 if showSplash {
                     SplashView()
+                        .transition(.opacity)
+                        .zIndex(1)
+                } else if !hasSeenOnboarding {
+                    OnboardingView {
+                        withAnimation(.easeInOut(duration: 0.4)) {
+                            hasSeenOnboarding = true
+                        }
+                    }
                 } else {
                     ContentView()
                         .environment(authService)
                 }
             }
             .task {
-                try? await Task.sleep(for: .seconds(2))
+                try? await Task.sleep(for: .seconds(3))
 
                 withAnimation(.easeOut(duration: 0.5)) {
                     showSplash = false

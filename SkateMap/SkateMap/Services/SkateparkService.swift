@@ -21,7 +21,7 @@ enum SkateparkService {
         let response = try await MKLocalSearch(request: request).start()
 
         return response.mapItems.map { item in
-            let coord = item.placemark.coordinate
+            let coord = item.location.coordinate
             let id = String(format: "%.6f,%.6f", coord.latitude, coord.longitude)
             return Skatepark(
                 id: id,

@@ -17,28 +17,60 @@ struct LoginView: View {
     @State private var resetEmail = ""
     @State private var showResetConfirmation = false
 
+    // Animation states
+    @State private var boardOffset: CGFloat = -200
+    @State private var boardRotation: Double = -30
+    @State private var titleOpacity: Double = 0
+    @State private var fieldsOpacity: Double = 0
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
-                    Text("Skate Maps")
-                        .font(.system(size: 40, design: .serif))
-                        .bold()
-                        .padding(.top, 80)
-                        .padding(.bottom, 48)
+
+                    // MARK: - Animated Header
+                    VStack(spacing: 8) {
+                        Image(systemName: "skateboard.fill")
+                            .font(.system(size: 56))
+                            .foregroundStyle(.darkblue)
+                            .rotationEffect(.degrees(boardRotation))
+                            .offset(x: boardOffset)
+
+                        Text("Skate Maps")
+                            .font(.system(size: 38, weight: .black, design: .rounded))
+                            .foregroundStyle(.primary)
+
+                        Text("Find. Ride. Share.")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
+                    .opacity(titleOpacity)
+                    .padding(.top, 60)
+                    .padding(.bottom, 40)
 
                     // MARK: - Fields
                     VStack(spacing: 14) {
-                        TextField("Email address", text: $viewModel.email)
-                            .keyboardType(.emailAddress)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .styledLoginField()
+                        HStack(spacing: 12) {
+                            Image(systemName: "envelope.fill")
+                                .foregroundStyle(.secondary)
+                                .frame(width: 20)
+                            TextField("Email address", text: $viewModel.email)
+                                .keyboardType(.emailAddress)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                        }
+                        .authField()
 
-                        SecureField("Password", text: $viewModel.password)
-                            .styledLoginField()
+                        HStack(spacing: 12) {
+                            Image(systemName: "lock.fill")
+                                .foregroundStyle(.secondary)
+                                .frame(width: 20)
+                            SecureField("Password", text: $viewModel.password)
+                        }
+                        .authField()
                     }
                     .padding(.horizontal, 24)
+                    .opacity(fieldsOpacity)
 
                     // MARK: - Error Message
                     if !authService.errorMessage.isEmpty {
@@ -56,9 +88,9 @@ struct LoginView: View {
                     } label: {
                         Text("Forgot password?")
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.darkblue)
                     }
-                    .padding(.top, 16)
+                    .padding(.top, 14)
 
                     // MARK: - Login Button
                     Button {
@@ -70,20 +102,43 @@ struct LoginView: View {
                     } label: {
                         ZStack {
                             Text("Log In")
+                                .font(.headline)
                                 .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(viewModel.isLoginValid ? Color.blue : Color.gray.opacity(0.4))
+                                .padding(.vertical, 16)
+                                .background(
+                                    viewModel.isLoginValid
+                                        ? AnyShapeStyle(LinearGradient(colors: [.darkblue, .blue], startPoint: .leading, endPoint: .trailing))
+                                        : AnyShapeStyle(Color.gray.opacity(0.35))
+                                )
                                 .foregroundStyle(.white)
                                 .clipShape(RoundedRectangle(cornerRadius: 16))
                                 .opacity(isLoading ? 0 : 1)
                             if isLoading {
-                                ProgressView().tint(.blue)
+                                ProgressView().tint(.white)
                             }
                         }
                     }
                     .disabled(!viewModel.isLoginValid || isLoading)
                     .padding(.horizontal, 24)
-                    .padding(.top, 32)
+                    .padding(.top, 28)
+
+                    // MARK: - Browse as Guest
+                    Button {
+                        authService.enterGuestMode()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "eye.fill")
+                                .font(.caption)
+                            Text("Browse as Guest")
+                        }
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.darkblue)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 20)
+                        .background(Color(.secondarySystemFill))
+                        .clipShape(Capsule())
+                    }
+                    .padding(.top, 20)
                 }
             }
             .scrollBounceBehavior(.basedOnSize)
@@ -96,7 +151,7 @@ struct LoginView: View {
                         SignUpView()
                     }
                     .fontWeight(.semibold)
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(.darkblue)
                 }
                 .font(.subheadline)
                 .padding(.vertical, 16)
@@ -124,17 +179,29 @@ struct LoginView: View {
             } message: {
                 Text("If an account exists for that email, a password reset link has been sent.")
             }
+            .onAppear {
+                withAnimation(.spring(response: 0.7, dampingFraction: 0.6).delay(0.1)) {
+                    boardOffset = 0
+                    boardRotation = 0
+                }
+                withAnimation(.easeOut(duration: 0.6).delay(0.3)) {
+                    titleOpacity = 1
+                }
+                withAnimation(.easeOut(duration: 0.5).delay(0.55)) {
+                    fieldsOpacity = 1
+                }
+            }
         }
     }
 }
 
-// MARK: - TextField Modifier
-private extension View {
-    func styledLoginField() -> some View {
+// MARK: - Shared Auth Field Modifier
+extension View {
+    func authField() -> some View {
         self
             .padding()
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }
 

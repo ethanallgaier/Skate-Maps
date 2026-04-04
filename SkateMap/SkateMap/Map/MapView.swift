@@ -15,6 +15,9 @@ struct MapView: View {
     @State private var searchText = ""
     @State private var showFilters = false
     @State private var selectedSkatepark: Skatepark?
+    @State private var showGuestAlert = false
+    
+    @Environment(AuthService.self) var authService
     
     @Namespace private var pinTransition
     @State private var ignoreNextCameraChange = false
@@ -347,7 +350,11 @@ struct MapView: View {
     //MARK: - ADD NEW PIN BUTTON
     var addPinButton: some View {
         Button {
-            showAddPin = true
+            if authService.isGuest {
+                showGuestAlert = true
+            } else {
+                showAddPin = true
+            }
         } label: {
             Image(systemName: "plus")
                 .foregroundStyle(.white)
@@ -357,6 +364,14 @@ struct MapView: View {
         }
         .buttonStyle(.plain)
         .glassEffect()
+        .alert("Sign In Required", isPresented: $showGuestAlert) {
+            Button("Sign In") {
+                authService.exitGuestMode()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You need to sign in to add a pin.")
+        }
     }
 
     // MARK: - SKATEPARK TOGGLE BUTTON

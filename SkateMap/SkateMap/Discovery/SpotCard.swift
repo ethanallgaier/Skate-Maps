@@ -90,6 +90,6 @@ struct SpotCard: View {
             .frame(width: 175)
             .glassEffect(in: .rect(cornerRadius: 16))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(CardPressStyle())
     }
 }

@@ -12,6 +12,8 @@ struct SpotOfTheDayCard: View {
     @ObservedObject var viewModel: MapViewModel
     let onTap: () -> Void
 
+    @State private var isPressed = false
+
     var body: some View {
         Button(action: onTap) {
             ZStack(alignment: .bottomLeading) {
@@ -31,13 +33,15 @@ struct SpotOfTheDayCard: View {
 
                 // Gradient overlay for text readability
                 LinearGradient(
-                    colors: [.clear, .clear, .black.opacity(0.8)],
+                    colors: [.clear, .clear, .black.opacity(0.85)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
 
                 // Content overlay
                 VStack(alignment: .leading, spacing: 8) {
+                    Spacer()
+
                     // Spot type badges
                     HStack(spacing: 6) {
                         ForEach(pin.spotTypes, id: \.self) { type in
@@ -58,7 +62,7 @@ struct SpotOfTheDayCard: View {
                     HStack(spacing: 10) {
                         Label(viewModel.username(for: pin.createdByUID), systemImage: "person.circle")
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.8))
+                            .foregroundStyle(.white.opacity(0.85))
 
                         if pin.averageRating > 0 {
                             HStack(spacing: 3) {
@@ -81,8 +85,9 @@ struct SpotOfTheDayCard: View {
             }
             .frame(height: 280)
             .clipShape(RoundedRectangle(cornerRadius: 20))
+            .shadow(color: .black.opacity(0.2), radius: 16, x: 0, y: 8)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(CardPressStyle())
     }
 
     private var gradientPlaceholder: some View {
@@ -96,5 +101,16 @@ struct SpotOfTheDayCard: View {
                 .font(.system(size: 60))
                 .foregroundColor(.white.opacity(0.18))
         )
+    }
+}
+
+// MARK: - Reusable Press Style
+
+struct CardPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.92 : 1)
+            .animation(.spring(duration: 0.25, bounce: 0.3), value: configuration.isPressed)
     }
 }

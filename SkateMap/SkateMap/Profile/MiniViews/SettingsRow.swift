@@ -12,23 +12,33 @@ struct SettingsRow: View {
     let icon: String
     let label: String
     var value: String? = nil
+    var iconColor: Color = .blue
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            HStack {
-                Label(label, systemImage: icon)
+            HStack(spacing: 14) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(iconColor.gradient, in: RoundedRectangle(cornerRadius: 7))
+                
+                Text(label)
                     .foregroundStyle(.primary)
+                
                 Spacer()
+                
                 if let value {
                     Text(value)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .font(.subheadline)
                 }
+                
                 Image(systemName: "chevron.right")
                     .foregroundStyle(.tertiary)
-                    .font(.caption)
+                    .font(.caption.weight(.semibold))
             }
         }
     }
@@ -36,14 +46,14 @@ struct SettingsRow: View {
 
 
 #Preview {
-    List {  // ✅ wrap in List since it's designed to live inside one
-        SettingsRow(icon: "person", label: "Username", value: "john") {
+    List {
+        SettingsRow(icon: "person", label: "Username", value: "john", iconColor: .blue) {
             print("tapped")
         }
-        SettingsRow(icon: "envelope", label: "Email", value: "john@email.com") {
+        SettingsRow(icon: "envelope", label: "Email", value: "john@email.com", iconColor: .teal) {
             print("tapped")
         }
-        SettingsRow(icon: "lock", label: "Change Password") { // ✅ no value
+        SettingsRow(icon: "lock", label: "Change Password", iconColor: .orange) {
             print("tapped")
         }
     }

@@ -11,6 +11,7 @@ import UIKit
 @Observable
 class AuthService {
     var isLoggedIn: Bool = false
+    var isGuest: Bool = false
     var errorMessage: String = ""
     var currentUser: UserInfo?
  
@@ -169,5 +170,14 @@ class AuthService {
         try await user.reauthenticate(with: credential)
         try await db.collection("users").document(user.uid).delete()
         try await user.delete()
+    }
+
+    // MARK: - Guest Mode
+    func enterGuestMode() {
+        isGuest = true
+    }
+
+    func exitGuestMode() {
+        isGuest = false
     }
 }

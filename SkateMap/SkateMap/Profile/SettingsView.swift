@@ -30,87 +30,114 @@ struct SettingsView: View {
             Section {
                 HStack {
                     Spacer()
-                    ZStack(alignment: .bottomTrailing) {
-                        PhotosPicker(selection: $selectedItem, matching: .images) {
-                            profileAvatar
-                                .frame(width: 100, height: 100)
-                                .clipShape(Circle())
-                                .overlay(Circle().stroke(.background, lineWidth: 3))
-                        }
-                        .id(authService.profileRefreshID)
-                        .onChange(of: selectedItem) { _, newItem in
-                            print("📸 selectedItem changed: \(String(describing: newItem))")
-                            guard let newItem else { return }
-                            Task {
-                                guard let data = try? await newItem.loadTransferable(type: Data.self),
-                                      let image = UIImage(data: data) else {
-                                    print("❌ Failed to load image data")
-                                    return
+                    VStack(spacing: 12) {
+                        ZStack(alignment: .bottomTrailing) {
+                            PhotosPicker(selection: $selectedItem, matching: .images) {
+                                profileAvatar
+                                    .frame(width: 100, height: 100)
+                                    .clipShape(Circle())
+                                    .overlay(
+                                        Circle()
+                                            .stroke(
+                                                LinearGradient(
+                                                    colors: [.blue, .purple, .pink],
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                ),
+                                                lineWidth: 3
+                                            )
+                                    )
+                                    .shadow(color: .blue.opacity(0.3), radius: 8, y: 4)
+                            }
+                            .id(authService.profileRefreshID)
+                            .onChange(of: selectedItem) { _, newItem in
+                                guard let newItem else { return }
+                                Task {
+                                    guard let data = try? await newItem.loadTransferable(type: Data.self),
+                                          let image = UIImage(data: data) else { return }
+                                    localProfileImage = image
+                                    isUploadingPhoto = true
+                                    do {
+                                        try await authService.updateProfilePicture(image)
+                                    } catch {
+                                        print("Upload error: \(error.localizedDescription)")
+                                    }
+                                    isUploadingPhoto = false
+                                    selectedItem = nil
                                 }
-                                localProfileImage = image
-                                isUploadingPhoto = true
-                                do {
-                                    
-                                    try await authService.updateProfilePicture(image)
-                                    
-                                } catch {
-                                    print("❌ Upload error: \(error.localizedDescription)") // ← check Xcode console
-                                }
-                                isUploadingPhoto = false
-                                selectedItem = nil
+                            }
+                            if isUploadingPhoto {
+                                Circle()
+                                    .fill(.black.opacity(0.4))
+                                    .frame(width: 100, height: 100)
+                                    .overlay(ProgressView().tint(.white))
+                            } else {
+                                Circle()
+                                    .fill(.blue.gradient)
+                                    .frame(width: 30, height: 30)
+                                    .overlay(
+                                        Image(systemName: "camera.fill")
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundStyle(.white)
+                                    )
+                                    .shadow(color: .blue.opacity(0.3), radius: 4, y: 2)
+                                    .offset(x: 2, y: 2)
                             }
                         }
-                        if isUploadingPhoto {
-                            Circle()
-                                .fill(.black.opacity(0.4))
-                                .frame(width: 90, height: 90)
-                                .clipShape(Circle())
-                                .overlay(ProgressView().tint(.white))
-                        } else {
-                            Circle()
-                                .fill(.blue)
-                                .frame(width: 28, height: 28)
-                                .overlay(
-                                    Image(systemName: "camera.fill")
-                                        .font(.caption)
-                                        .foregroundStyle(.white)
-                                )
-                                .offset(x: 2, y: 2)
+                        
+                        Text(authService.currentUser?.username ?? "Skater")
+                            .font(.title3.bold())
+                        
+                        if let email = Auth.auth().currentUser?.email {
+                            Text(email)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     Spacer()
                 }
-                .padding(.vertical, 8)
+                .padding(.vertical, 12)
                 .listRowBackground(Color.clear)
             }
             
             // MARK: - PROFILE
-            Section("Profile") {
-                SettingsRow(icon: "person", label: "Username", value: authService.currentUser?.username) {
+            Section {
+                SettingsRow(icon: "person.fill", label: "Username", value: authService.currentUser?.username, iconColor: .blue) {
                     showEditUsername = true
                 }
-                SettingsRow(icon: "text.quote", label: "Bio", value: authService.currentUser?.bio.isEmpty == false ? authService.currentUser?.bio : "Add a bio") {
+                SettingsRow(icon: "text.quote", label: "Bio", value: authService.currentUser?.bio.isEmpty == false ? authService.currentUser?.bio : "Add a bio", iconColor: .purple) {
                     showEditBio = true
                 }
+            } header: {
+                Text("Profile")
             }
             
             // MARK: - ACCOUNT
-            Section("Account") {
-                SettingsRow(icon: "envelope", label: "Email", value: Auth.auth().currentUser?.email) {
+            Section {
+                SettingsRow(icon: "envelope.fill", label: "Email", value: Auth.auth().currentUser?.email, iconColor: .teal) {
                     showEditEmail = true
                 }
-                SettingsRow(icon: "lock", label: "Change Password") {
+                SettingsRow(icon: "lock.fill", label: "Change Password", iconColor: .orange) {
                     showEditPassword = true
                 }
+            } header: {
+                Text("Account")
             }
             
-            // MARK: - DELETE ZONE
+            // MARK: - ACTIONS
             Section {
-                Button(role: .destructive) {
+                Button {
                     showLogout = true
-//                    authService.logout()
                 } label: {
-                    Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")
+                    HStack(spacing: 14) {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 30, height: 30)
+                            .background(Color.red.gradient, in: RoundedRectangle(cornerRadius: 7))
+                        Text("Log Out")
+                            .foregroundStyle(.red)
+                    }
                 }
                 .confirmationDialog("Are you sure you want to log out?", isPresented: $showLogout, titleVisibility: .visible) {
                     Button("Log Out", role: .destructive) {
@@ -119,13 +146,33 @@ struct SettingsView: View {
                     Button("Cancel", role: .cancel) { }
                 }
                 
-                Button(role: .destructive) {
+                Button {
                     showDeleteAccount = true
                 } label: {
-                    Label("Delete Account", systemImage: "trash")
+                    HStack(spacing: 14) {
+                        Image(systemName: "trash.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 30, height: 30)
+                            .background(Color.red.gradient, in: RoundedRectangle(cornerRadius: 7))
+                        Text("Delete Account")
+                            .foregroundStyle(.red)
+                    }
                 }
             }
+            
+            Section {
+                HStack {
+                    Spacer()
+                    Text("SkateMap v1.1")
+                        .font(.caption2)
+                        .foregroundStyle(.quaternary)
+                    Spacer()
+                }
+                .listRowBackground(Color.clear)
+            }
         }
+        .listStyle(.insetGrouped)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         

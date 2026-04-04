@@ -25,6 +25,7 @@ struct DiscoveryView: View {
 
     @State private var selectedPin: PinInfo?
     @State private var selectedCollection: CuratedCollection?
+    @State private var appeared = false
     @Namespace private var pinTransition
 
     // MARK: - Data
@@ -129,30 +130,39 @@ struct DiscoveryView: View {
                         }
                         .matchedTransitionSource(id: spot.id, in: pinTransition)
                         .padding(.horizontal)
+                        .sectionAppear(appeared: appeared, delay: 0.05)
                     }
 
                     // MARK: Near Me
                     if !nearMeSpots.isEmpty {
                         sectionHeader("Near Me", icon: "location.fill")
+                            .sectionAppear(appeared: appeared, delay: 0.12)
                         horizontalCards(nearMeSpots, showDistance: true)
+                            .sectionAppear(appeared: appeared, delay: 0.16)
                     }
 
                     // MARK: New Spots
                     if !newSpots.isEmpty {
                         sectionHeader("New Spots", icon: "clock.badge")
+                            .sectionAppear(appeared: appeared, delay: 0.22)
                         horizontalCards(newSpots, showDistance: false)
+                            .sectionAppear(appeared: appeared, delay: 0.26)
                     }
 
                     // MARK: Trending
                     if !trendingSpots.isEmpty {
                         sectionHeader("Trending", icon: "flame.fill")
+                            .sectionAppear(appeared: appeared, delay: 0.32)
                         horizontalCards(trendingSpots, showDistance: false)
+                            .sectionAppear(appeared: appeared, delay: 0.36)
                     }
 
                     // MARK: Collections
                     if !curatedCollections.isEmpty {
                         sectionHeader("Collections", icon: "rectangle.stack.fill")
+                            .sectionAppear(appeared: appeared, delay: 0.42)
                         collectionsGrid
+                            .sectionAppear(appeared: appeared, delay: 0.46)
                     }
 
                     Spacer(minLength: 40)
@@ -160,6 +170,12 @@ struct DiscoveryView: View {
                 .padding(.top, 8)
             }
             .navigationTitle("Discover")
+            .onAppear {
+                guard !appeared else { return }
+                withAnimation(.easeOut(duration: 0.5)) {
+                    appeared = true
+                }
+            }
             .fullScreenCover(item: $selectedPin) { pin in
                 PinInfoView(pin: pin, viewModel: viewModel)
                     .navigationTransition(.zoom(sourceID: pin.id, in: pinTransition))
@@ -173,13 +189,15 @@ struct DiscoveryView: View {
     // MARK: - Helpers
 
     private func sectionHeader(_ title: String, icon: String) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 7) {
             Image(systemName: icon)
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.blue)
             Text(title)
                 .font(.title3.bold())
         }
         .padding(.horizontal)
+        .padding(.top, 4)
     }
 
     private func horizontalCards(_ pins: [PinInfo], showDistance: Bool) -> some View {
@@ -197,6 +215,7 @@ struct DiscoveryView: View {
             }
             .padding(.horizontal)
         }
+        .scrollClipDisabled()
     }
 
     private var collectionsGrid: some View {
@@ -211,5 +230,25 @@ struct DiscoveryView: View {
             }
         }
         .padding(.horizontal)
+    }
+}
+
+// MARK: - Section Appear Modifier
+
+private struct SectionAppearModifier: ViewModifier {
+    let appeared: Bool
+    let delay: Double
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 18)
+            .animation(.spring(duration: 0.5, bounce: 0.15).delay(delay), value: appeared)
+    }
+}
+
+extension View {
+    func sectionAppear(appeared: Bool, delay: Double) -> some View {
+        modifier(SectionAppearModifier(appeared: appeared, delay: delay))
     }
 }

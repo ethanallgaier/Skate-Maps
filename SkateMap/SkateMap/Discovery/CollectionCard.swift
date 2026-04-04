@@ -10,11 +10,21 @@ import SwiftUI
 struct CollectionCard: View {
     let collection: CuratedCollection
 
+    private var accentColor: Color {
+        switch collection.icon {
+        case "star.fill": return .yellow
+        case "light.beacon.max": return .red
+        case "shield.checkered": return .green
+        case "figure.stairs": return .purple
+        default: return .blue
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Image(systemName: collection.icon)
                 .font(.title3)
-                .foregroundStyle(.blue)
+                .foregroundStyle(accentColor)
                 .padding(.bottom, 2)
 
             Text(collection.title)
@@ -33,8 +43,8 @@ struct CollectionCard: View {
                 .font(.caption2.bold())
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(.blue.opacity(0.15), in: Capsule())
-                .foregroundStyle(.blue)
+                .background(accentColor.opacity(0.15), in: Capsule())
+                .foregroundStyle(accentColor)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(minHeight: 120)

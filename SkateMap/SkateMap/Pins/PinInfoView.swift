@@ -36,8 +36,10 @@ struct PinInfoView: View {
     @State private var showReportSheet = false
     @State private var reportReason = ""
     @State private var showReportConfirmation = false
+    @State private var showGuestAlert = false
 
     @Environment(\.dismiss) var dismiss
+    @Environment(AuthService.self) var authService
     
     
 
@@ -155,7 +157,11 @@ struct PinInfoView: View {
                             if !isEditing {
                                 HStack {
                                     Button {
-                                        viewModel.toggleSave(pin: currentPin)
+                                        if authService.isGuest {
+                                            showGuestAlert = true
+                                        } else {
+                                            viewModel.toggleSave(pin: currentPin)
+                                        }
                                     } label: {
                                         HStack(spacing: 6) {
                                             Image(systemName: viewModel.isSaved(currentPin) ? "bookmark.fill" : "bookmark")
@@ -171,7 +177,11 @@ struct PinInfoView: View {
                                     Spacer()
 
                                     StarRatingView(rating: currentPin.averageRating, userRating: myRating) { stars in
-                                        Task { await viewModel.ratePin(currentPin, stars: stars) }
+                                        if authService.isGuest {
+                                            showGuestAlert = true
+                                        } else {
+                                            Task { await viewModel.ratePin(currentPin, stars: stars) }
+                                        }
                                     }
                                 }
                             }
@@ -435,7 +445,7 @@ struct PinInfoView: View {
                             }
 
                             // MARK: - Report Button (non-owners only)
-                            if !isOwner && !isEditing {
+                            if !isOwner && !isEditing && !authService.isGuest {
                                 Button {
                                     showReportSheet = true
                                 } label: {
@@ -520,6 +530,15 @@ struct PinInfoView: View {
             } message: {
                 Text("Thanks for letting us know. We'll review this spot.")
             }
+            .alert("Sign In Required", isPresented: $showGuestAlert) {
+                Button("Sign In") {
+                    authService.exitGuestMode()
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("You need to sign in to interact with pins.")
+            }
         
     }
 
@@ -571,7 +590,11 @@ struct PinInfoView: View {
                     }
                     Spacer()
                     Button {
-                        viewModel.toggleSave(pin: currentPin)
+                        if authService.isGuest {
+                            showGuestAlert = true
+                        } else {
+                            viewModel.toggleSave(pin: currentPin)
+                        }
                     } label: {
                         Image(systemName: viewModel.isSaved(currentPin) ? "heart.fill" : "heart")
                             .font(.system(size: 15, weight: .semibold))

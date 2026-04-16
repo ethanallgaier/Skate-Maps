@@ -6,6 +6,7 @@
 //
 import FirebaseAuth
 import FirebaseFirestore
+import FirebaseStorage
 import UIKit
 
 @Observable
@@ -14,8 +15,8 @@ class AuthService {
     var isGuest: Bool = false
     var errorMessage: String = ""
     var currentUser: UserInfo?
- 
-    
+
+
     var profileRefreshID: UUID = UUID()
     private let db = Firestore.firestore()
     private var authHandle: AuthStateDidChangeListenerHandle?
@@ -87,28 +88,19 @@ class AuthService {
     // MARK: - Fetch User
     @MainActor
     func fetchUser(uid: String) async {
-        print("🔍 Fetching user for UID: \(uid)")
         do {
             let snapshot = try await db.collection("users").document(uid).getDocument(source: .server)
-            print("📄 Raw Firestore data: \(snapshot.data() ?? [:])")  // ✅ see exactly what Firestore returns
-            currentUser = try snapshot.data(as: UserInfo.self)  // ✅ throws instead of silently failing
-            print("✅ fetchUser complete — username: \(currentUser?.username ?? "nil"), pic: \(currentUser?.profilePicture ?? "nil")")
+            currentUser = try snapshot.data(as: UserInfo.self)
         } catch {
-            print("❌ fetchUser failed: \(error)")  // ✅ now we see the decode error
+            // Silently fail — user data may not exist yet
         }
     }
 
     // MARK: - Update Username
     func updateUsername(_ username: String) async throws {
-        guard let uid = Auth.auth().currentUser?.uid else { // ✅ use Auth directly, not currentUser
-            print("❌ No UID found")
-            return
-        }
-        print("✅ Updating username to: \(username)")
+        guard let uid = Auth.auth().currentUser?.uid else { return }
         try await db.collection("users").document(uid).updateData(["username": username])
-        print("✅ Firestore updated")
-        await fetchUser(uid: uid) // ✅ re-fetch instead of manually rebuilding
-        print("✅ currentUser after fetch: \(currentUser?.username ?? "nil")")
+        await fetchUser(uid: uid)
     }
 
     // MARK: - Update Bio
@@ -128,11 +120,7 @@ class AuthService {
 
     // MARK: - Update Profile Picture
     func updateProfilePicture(_ image: UIImage) async throws {
-        guard let uid = Auth.auth().currentUser?.uid else {
-            print("❌ No UID found")
-            return
-        }
-        print("✅ Starting upload for UID: \(uid)")
+        guard let uid = Auth.auth().currentUser?.uid else { return }
 
         // Clear the old image from cache before uploading the new one
         if let oldURL = currentUser?.profilePicture, !oldURL.isEmpty {
@@ -141,15 +129,12 @@ class AuthService {
 
         let path = "profile_images/\(uid)_\(Date().timeIntervalSince1970)"
         let url = try await ImageUploader.upload(image: image, path: path)
-        print("✅ Image uploaded, URL: \(url)")
         try await db.collection("users").document(uid).updateData(["profilePicture": url])
-        print("✅ Firestore updated")
         URLCache.shared.removeAllCachedResponses()
         await fetchUser(uid: uid)
         await MainActor.run { profileRefreshID = UUID() }
-        print("✅ currentUser after fetch: \(currentUser?.profilePicture ?? "nil")")
     }
-    
+
     // MARK: - Update Email
     func updateEmail(newEmail: String, currentPassword: String) async throws {
         guard let user = Auth.auth().currentUser,
@@ -174,8 +159,53 @@ class AuthService {
               let email = user.email else { return }
         let credential = EmailAuthProvider.credential(withEmail: email, password: password)
         try await user.reauthenticate(with: credential)
-        try await db.collection("users").document(user.uid).delete()
+
+        let uid = user.uid
+
+        // Delete all pins created by this user
+        let pinsSnapshot = try await db.collection("pins")
+            .whereField("createdByUID", isEqualTo: uid)
+            .getDocuments()
+
+        for doc in pinsSnapshot.documents {
+            // Delete pin images from Storage
+            if let imageURLs = doc.data()["imageURls"] as? [String] {
+                for urlString in imageURLs {
+                    if let url = URL(string: urlString),
+                       let path = extractStoragePath(from: url) {
+                        try? await Storage.storage().reference(withPath: path).delete()
+                    }
+                }
+            }
+            // Delete comments subcollection
+            let comments = try await doc.reference.collection("comments").getDocuments()
+            for comment in comments.documents {
+                try await comment.reference.delete()
+            }
+            // Delete the pin document
+            try await doc.reference.delete()
+        }
+
+        // Delete profile image from Storage
+        if let profilePic = currentUser?.profilePicture, !profilePic.isEmpty,
+           let url = URL(string: profilePic),
+           let path = extractStoragePath(from: url) {
+            try? await Storage.storage().reference(withPath: path).delete()
+        }
+
+        // Delete user document from Firestore
+        try await db.collection("users").document(uid).delete()
+
+        // Delete Firebase Auth account
         try await user.delete()
+    }
+
+    /// Extracts the Firebase Storage path from a download URL
+    private func extractStoragePath(from url: URL) -> String? {
+        // Firebase Storage download URLs contain the path after /o/ and before ?
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let path = components.path.split(separator: "/o/").last else { return nil }
+        return String(path).removingPercentEncoding
     }
 
     // MARK: - Guest Mode

@@ -60,7 +60,7 @@ struct SettingsView: View {
                                     do {
                                         try await authService.updateProfilePicture(image)
                                     } catch {
-                                        print("Upload error: \(error.localizedDescription)")
+                                        // Upload failed
                                     }
                                     isUploadingPhoto = false
                                     selectedItem = nil
@@ -161,6 +161,38 @@ struct SettingsView: View {
                 }
             }
             
+            // MARK: - LEGAL
+            Section {
+                NavigationLink {
+                    PrivacyPolicyView()
+                } label: {
+                    HStack(spacing: 14) {
+                        Image(systemName: "hand.raised.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 30, height: 30)
+                            .background(Color.blue.gradient, in: RoundedRectangle(cornerRadius: 7))
+                        Text("Privacy Policy")
+                            .foregroundStyle(.primary)
+                    }
+                }
+                NavigationLink {
+                    TermsOfServiceView()
+                } label: {
+                    HStack(spacing: 14) {
+                        Image(systemName: "doc.text.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 30, height: 30)
+                            .background(Color.gray.gradient, in: RoundedRectangle(cornerRadius: 7))
+                        Text("Terms of Service")
+                            .foregroundStyle(.primary)
+                    }
+                }
+            } header: {
+                Text("Legal")
+            }
+
             Section {
                 HStack {
                     Spacer()

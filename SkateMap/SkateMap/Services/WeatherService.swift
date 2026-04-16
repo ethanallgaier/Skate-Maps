@@ -101,7 +101,7 @@ actor WeatherService {
             cache[key] = (weather, Date())
             return weather
         } catch {
-            print("[Weather] Error: \(error.localizedDescription)")
+            // Weather fetch failed
             return nil
         }
     }

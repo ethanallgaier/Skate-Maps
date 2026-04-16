@@ -90,7 +90,7 @@ class MapViewModel: ObservableObject {
             } catch is CancellationError {
                 await MainActor.run { self.isLoadingSkateparks = false }
             } catch {
-                print("[Skateparks] Error: \(error.localizedDescription)")
+                // Skatepark fetch failed
                 await MainActor.run { self.isLoadingSkateparks = false }
             }
         }
@@ -176,7 +176,7 @@ class MapViewModel: ObservableObject {
                 self.profilePictureCache[uid] = pic
             }
         } catch {
-            print("Error fetching user info for \(uid): \(error)")
+            // User info fetch failed
         }
     }
 
@@ -192,9 +192,8 @@ class MapViewModel: ObservableObject {
         ]
         do {
             try await dataBase.collection("reports").addDocument(data: report)
-            print("Report submitted for pin \(pinID)")
         } catch {
-            print("Error reporting pin: \(error)")
+            // Report submission failed
         }
     }
 
@@ -203,13 +202,9 @@ class MapViewModel: ObservableObject {
         guard let pinID = pin.id else { return }
         do {
             try await dataBase.collection("pins").document(pinID).delete()
-            print("Pin deleted!")
-
-            // ✅ Remove the deleted pin from savedPinIDs locally
             savedPinIDs.removeAll { $0 == pinID }
-
         } catch {
-            print("Error deleting pin: \(error)")
+            // Pin deletion failed
         }
     }
     
@@ -218,8 +213,7 @@ class MapViewModel: ObservableObject {
         dataBase.collection("pins")
             .order(by: "time", descending: true)
             .addSnapshotListener { snapshot, error in
-                if let error = error {
-                    print("Error fetching pins: \(error)")
+                if error != nil {
                     return
                 }
                 self.pins = snapshot?.documents.compactMap {
@@ -245,24 +239,18 @@ class MapViewModel: ObservableObject {
     
 //MARK: - ADD PIN TO SKATEMAPS
     func addPin(name: String, details: String, coordinate: CLLocationCoordinate2D, username: String, images: [UIImage] = [], spotTypes: [SpotType] = [.other], riskLevel: RiskLevel = .low, difficultyLevel: DifficultyLevel = .beginner, surfaceQuality: SurfaceQuality = .decent, bestTimes: [BestTime] = []) async {
-        guard let uid = Auth.auth().currentUser?.uid else {
-            print("No user logged in!")
-            return
-        }
-        print("📸 Images to upload: \(images.count)") // how many images are we getting?
-
+        guard let uid = Auth.auth().currentUser?.uid else { return }
         // Upload all images first, collect their download URLs
         var uploadedURLs: [String] = []
-        
+
         for image in images {
             do {
-                        let url = try await ImageUploader.upload(image: image)
-                        print("✅ Uploaded: \(url)")
-                        uploadedURLs.append(url)
-                    } catch {
-                        print("❌ Upload failed: \(error)") // now we can see the actual error
-                    }
-                }
+                let url = try await ImageUploader.upload(image: image)
+                uploadedURLs.append(url)
+            } catch {
+                // Image upload failed, skip this image
+            }
+        }
 
         let newPin = PinInfo(
             pinName: name,
@@ -282,9 +270,8 @@ class MapViewModel: ObservableObject {
 
         do {
             try dataBase.collection("pins").addDocument(from: newPin)
-            print("Pin saved!")
         } catch {
-            print("Error saving pin: \(error)")
+            // Pin save failed
         }
     }
 
@@ -305,7 +292,7 @@ class MapViewModel: ObservableObject {
                 "imageURls": updatedURLs
             ])
         } catch {
-            print("Error updating photos: \(error)")
+            // Photo update failed
         }
     }
     
@@ -548,7 +535,7 @@ class MapViewModel: ObservableObject {
                 "ratings.\(uid)": stars
             ])
         } catch {
-            print("❌ Error rating pin: \(error)")
+            // Rating failed
         }
     }
 
@@ -560,7 +547,7 @@ class MapViewModel: ObservableObject {
                 "ratings.\(uid)": FieldValue.delete()
             ])
         } catch {
-            print("❌ Error removing rating: \(error)")
+            // Rating removal failed
         }
     }
     // MARK: - COMMENTS
@@ -574,7 +561,7 @@ class MapViewModel: ObservableObject {
                 .getDocuments()
             return snapshot.documents.compactMap { try? $0.data(as: Comment.self) }
         } catch {
-            print("❌ Error fetching comments: \(error)")
+            // Comment fetch failed
             return []
         }
     }
@@ -588,7 +575,7 @@ class MapViewModel: ObservableObject {
                 .collection("comments")
                 .addDocument(from: comment)
         } catch {
-            print("❌ Error adding comment: \(error)")
+            // Comment add failed
         }
     }
 
@@ -600,7 +587,7 @@ class MapViewModel: ObservableObject {
                 .document(commentID)
                 .delete()
         } catch {
-            print("❌ Error deleting comment: \(error)")
+            // Comment delete failed
         }
     }
 

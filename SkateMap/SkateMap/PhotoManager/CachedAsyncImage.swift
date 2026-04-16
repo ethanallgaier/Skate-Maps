@@ -87,7 +87,7 @@ struct CachedAsyncImage<Placeholder: View>: View {
                     }
                 }
             } catch {
-                print("Image load failed: \(error.localizedDescription)")
+                // Image load failed
             }
             await MainActor.run { isLoading = false }
         }

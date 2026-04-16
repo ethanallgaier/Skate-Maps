@@ -254,7 +254,7 @@ struct MapView: View {
             } label: {
                 Image(systemName: showFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
                     .font(.system(size: 18))
-                    .foregroundStyle(!selectedTypes.isEmpty ? .red : .white)
+                    .foregroundStyle(!selectedTypes.isEmpty ? Color(red: 0.0, green: 0.1, blue: 0.4) : .white)
                     .padding(10)
                     .contentShape(Rectangle())
                     .contentTransition(.symbolEffect(.replace))
@@ -307,7 +307,8 @@ struct MapView: View {
                     Text("All")
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .foregroundStyle(selectedTypes.isEmpty ? .red : .primary)
+                        .foregroundStyle(selectedTypes.isEmpty ? .white : .primary)
+                        .background(selectedTypes.isEmpty ? Color(red: 0.0, green: 0.1, blue: 0.4) : .clear, in: Capsule())
                         .glassEffect()
                 }
                 ForEach(SpotType.allCases, id: \.self) { type in
@@ -321,7 +322,8 @@ struct MapView: View {
                         Text(type.rawValue)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .foregroundStyle(selectedTypes.contains(type) ? .red : .primary)
+                            .foregroundStyle(selectedTypes.contains(type) ? .white : .primary)
+                            .background(selectedTypes.contains(type) ? Color(red: 0.0, green: 0.1, blue: 0.4) : .clear, in: Capsule())
                             .glassEffect()
                     }
                 }

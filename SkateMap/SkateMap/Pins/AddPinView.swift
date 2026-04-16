@@ -328,10 +328,11 @@ struct AddPinView: View {
                                     }
                                 }
 
+                                guard let coord = coordinate else { return }
                                 await viewModel.addPin(
                                     name: pinName,
                                     details: pinDetails,
-                                    coordinate: coordinate!,
+                                    coordinate: coord,
                                     username: authService.currentUser?.username ?? "Unknown",
                                     images: images,
                                     spotTypes: Array(selectedTypes),

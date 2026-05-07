@@ -4,12 +4,12 @@ struct TermsOfServiceView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                Text("Last updated: April 13, 2026")
+                Text("Last updated: April 30, 2026")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
                 section("Acceptance of Terms",
-                    "By using SkateMap, you agree to these Terms of Service. If you do not agree, please do not use the app."
+                    "By using SkateMap, you agree to these Terms of Service and our End User License Agreement (EULA). If you do not agree, please do not use the app."
                 )
 
                 section("User Accounts",
@@ -20,12 +20,16 @@ struct TermsOfServiceView: View {
                     "You retain ownership of the content you post (photos, pins, comments). By posting content, you grant SkateMap a non-exclusive license to display it within the app. You are responsible for ensuring your content does not violate any laws or the rights of others."
                 )
 
-                section("Prohibited Conduct",
-                    "You may not post offensive, illegal, or harmful content. You may not harass other users. You may not use the app to promote illegal activity. You may not attempt to gain unauthorized access to any part of the service. Violations may result in account termination."
+                section("Zero Tolerance for Objectionable Content",
+                    "SkateMap has a zero-tolerance policy for objectionable content or abusive behavior. You may not post content that is offensive, sexually explicit, violent, discriminatory, harassing, threatening, hateful, or otherwise objectionable. You may not harass, bully, or abuse other users. You may not use the app to promote illegal activity. You may not attempt to gain unauthorized access to any part of the service. Any violation of this policy will result in immediate removal of the offending content and may result in permanent account termination."
                 )
 
-                section("Content Moderation",
-                    "SkateMap reserves the right to remove any content that violates these terms or is reported by users. We may suspend or terminate accounts that repeatedly violate these terms."
+                section("Content Moderation & Reporting",
+                    "SkateMap actively moderates user-generated content. Users can report objectionable content or abusive users using the in-app reporting tools. All reports are reviewed within 24 hours. Content that violates these terms will be removed and the offending user's account may be suspended or permanently terminated. Users can also block other users to immediately remove their content from view."
+                )
+
+                section("Blocking Users",
+                    "You may block any user at any time. Blocking a user will immediately hide all of their content from your feed and prevent them from interacting with your content. Blocking a user also sends a notification to our moderation team for review."
                 )
 
                 section("Disclaimer",

@@ -16,18 +16,18 @@ struct SpotOfTheDayCard: View {
         Button(action: onTap) {
             ZStack(alignment: .bottomLeading) {
                 // Background image or placeholder — always fills
-                Group {
+                GeometryReader { geo in
                     if let firstURL = pin.imageURls.first, let url = URL(string: firstURL) {
                         CachedAsyncImage(url: url) {
                             gradientPlaceholder
                         }
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
                     } else {
                         gradientPlaceholder
                     }
                 }
-                .frame(maxWidth: .infinity)
                 .frame(height: 280)
-                .clipped()
 
                 // Gradient overlay for text readability
                 LinearGradient(

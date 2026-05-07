@@ -43,6 +43,78 @@ class MapViewModel: ObservableObject {
 
     @Published var pins: [PinInfo] = []
 
+    // MARK: - Blocked Users
+    @Published var blockedUserIDs: Set<String> = []
+
+    /// Pins filtered to exclude content from blocked users
+    var filteredPins: [PinInfo] {
+        pins.filter { !blockedUserIDs.contains($0.createdByUID) }
+    }
+
+    func fetchBlockedUsers() {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        dataBase.collection("users").document(uid).addSnapshotListener { snapshot, _ in
+            let data = snapshot?.data()
+            let ids = data?["blockedUserIDs"] as? [String] ?? []
+            DispatchQueue.main.async {
+                self.blockedUserIDs = Set(ids)
+            }
+        }
+    }
+
+    func blockUser(_ blockedUID: String) async {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+
+        // Add to local state immediately so content disappears from feed
+        _ = await MainActor.run {
+            blockedUserIDs.insert(blockedUID)
+        }
+
+        // Save to Firestore
+        let userRef = dataBase.collection("users").document(uid)
+        do {
+            try await userRef.setData([
+                "blockedUserIDs": FieldValue.arrayUnion([blockedUID])
+            ], merge: true)
+        } catch {
+            // Block save failed
+        }
+
+        // Notify developer/moderation team by creating a block report
+        let blockReport: [String: Any] = [
+            "blockedUID": blockedUID,
+            "blockedBy": uid,
+            "timestamp": Timestamp(),
+            "type": "user_block"
+        ]
+        do {
+            try await dataBase.collection("reports").addDocument(data: blockReport)
+        } catch {
+            // Block report failed
+        }
+    }
+
+    func unblockUser(_ blockedUID: String) async {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+
+        _ = await MainActor.run {
+            blockedUserIDs.remove(blockedUID)
+        }
+
+        let userRef = dataBase.collection("users").document(uid)
+        do {
+            try await userRef.setData([
+                "blockedUserIDs": FieldValue.arrayRemove([blockedUID])
+            ], merge: true)
+        } catch {
+            // Unblock failed
+        }
+    }
+
+    func isBlocked(_ uid: String) -> Bool {
+        blockedUserIDs.contains(uid)
+    }
+
     // MARK: - Skateparks (from OpenStreetMap)
     @Published var skateparks: [Skatepark] = []
     @Published var showSkateparks = true
@@ -186,8 +258,48 @@ class MapViewModel: ObservableObject {
               let uid = Auth.auth().currentUser?.uid else { return }
         let report: [String: Any] = [
             "pinID": pinID,
+            "pinName": pin.pinName,
+            "reportedBy": uid,
+            "contentOwnerUID": pin.createdByUID,
+            "reason": reason,
+            "type": "pin_report",
+            "timestamp": Timestamp()
+        ]
+        do {
+            try await dataBase.collection("reports").addDocument(data: report)
+        } catch {
+            // Report submission failed
+        }
+    }
+
+    // MARK: - Report User
+    func reportUser(_ reportedUID: String, reason: String) async {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let report: [String: Any] = [
+            "reportedUID": reportedUID,
             "reportedBy": uid,
             "reason": reason,
+            "type": "user_report",
+            "timestamp": Timestamp()
+        ]
+        do {
+            try await dataBase.collection("reports").addDocument(data: report)
+        } catch {
+            // Report submission failed
+        }
+    }
+
+    // MARK: - Report Comment
+    func reportComment(_ comment: Comment, on pin: PinInfo, reason: String) async {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let report: [String: Any] = [
+            "pinID": pin.id ?? "",
+            "commentID": comment.id ?? "",
+            "commentText": comment.text,
+            "reportedBy": uid,
+            "contentOwnerUID": comment.authorUID,
+            "reason": reason,
+            "type": "comment_report",
             "timestamp": Timestamp()
         ]
         do {
@@ -524,6 +636,7 @@ class MapViewModel: ObservableObject {
     init() {
         fetchPins()
         fetchSavedPins()
+        fetchBlockedUsers()
     }
     
     // MARK: - RATE A SPOT

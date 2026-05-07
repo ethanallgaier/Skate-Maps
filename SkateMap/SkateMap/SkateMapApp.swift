@@ -33,6 +33,7 @@ struct SkateMapApp: App {
     @State private var authService: AuthService
     @State private var showSplash = true
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @AppStorage("hasAcceptedEULA") private var hasAcceptedEULA = false
 
     init() {
         FirebaseApp.configure()
@@ -53,6 +54,8 @@ struct SkateMapApp: App {
                             hasSeenOnboarding = true
                         }
                     }
+                } else if !hasAcceptedEULA {
+                    EULAView()
                 } else {
                     ContentView()
                         .environment(authService)

@@ -34,11 +34,19 @@ struct PinInfoView: View {
     @State private var editedSurface: SurfaceQuality = .decent
     @State private var editedBestTimes: Set<BestTime> = []
     @State private var isSaving = false
+    @State private var showEditContentFilterAlert = false
 
     @State private var showReportSheet = false
     @State private var reportReason = ""
     @State private var showReportConfirmation = false
     @State private var showGuestAlert = false
+    @State private var showBlockConfirm = false
+    @State private var showBlockedAlert = false
+    @State private var showCommentFilterAlert = false
+    @State private var showCommentReportSheet = false
+    @State private var commentToReport: Comment?
+    @State private var commentReportReason = ""
+    @State private var showCommentReportConfirmation = false
 
     @State private var weather: SpotWeather?
     @State private var distanceText: String?
@@ -208,8 +216,9 @@ struct PinInfoView: View {
             // Calculate distance/travel time from user's location
             await calculateDistance()
 
-            // Fetch comments
-            comments = await viewModel.fetchComments(for: currentPin)
+            // Fetch comments (filter out blocked users)
+            let allComments = await viewModel.fetchComments(for: currentPin)
+            comments = allComments.filter { !viewModel.isBlocked($0.authorUID) }
         }
         .onChange(of: viewModel.pins) { _, newPins in
             if let updated = newPins.first(where: { $0.id == currentPin.id }) {
@@ -273,6 +282,22 @@ struct PinInfoView: View {
         } message: {
             Text("Thanks for letting us know. We'll review this spot.")
         }
+        .confirmationDialog("Block this user?", isPresented: $showBlockConfirm, titleVisibility: .visible) {
+            Button("Block", role: .destructive) {
+                Task {
+                    await viewModel.blockUser(currentPin.createdByUID)
+                    showBlockedAlert = true
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("All content from \(viewModel.username(for: currentPin.createdByUID)) will be hidden from your feed. This also notifies our moderation team.")
+        }
+        .alert("User Blocked", isPresented: $showBlockedAlert) {
+            Button("OK") { dismiss() }
+        } message: {
+            Text("You will no longer see content from this user.")
+        }
         .sheet(isPresented: $showRatingSheet) {
             VStack(spacing: 16) {
                 Capsule()
@@ -328,6 +353,63 @@ struct PinInfoView: View {
             .padding(.horizontal, 24)
             .presentationDetents([.height(280)])
             .presentationDragIndicator(.hidden)
+        }
+        .alert("Content Not Allowed", isPresented: $showEditContentFilterAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Your spot name or details contain inappropriate content. Please revise and try again.")
+        }
+        .alert("Comment Not Allowed", isPresented: $showCommentFilterAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Your comment contains inappropriate content. Please revise and try again.")
+        }
+        .sheet(isPresented: $showCommentReportSheet) {
+            NavigationStack {
+                Form {
+                    Section("Why are you reporting this comment?") {
+                        Picker("Reason", selection: $commentReportReason) {
+                            Text("Select a reason").tag("")
+                            Text("Inappropriate content").tag("Inappropriate content")
+                            Text("Spam").tag("Spam")
+                            Text("Harassment").tag("Harassment")
+                            Text("Offensive language").tag("Offensive language")
+                            Text("Other").tag("Other")
+                        }
+                    }
+                }
+                .navigationTitle("Report Comment")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") {
+                            commentReportReason = ""
+                            commentToReport = nil
+                            showCommentReportSheet = false
+                        }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Submit") {
+                            Task {
+                                if let comment = commentToReport {
+                                    await viewModel.reportComment(comment, on: currentPin, reason: commentReportReason)
+                                }
+                                commentReportReason = ""
+                                commentToReport = nil
+                                showCommentReportSheet = false
+                                showCommentReportConfirmation = true
+                            }
+                        }
+                        .disabled(commentReportReason.isEmpty)
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
+        .alert("Report Submitted", isPresented: $showCommentReportConfirmation) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Thanks for letting us know. We'll review this comment.")
         }
         .alert("Sign In Required", isPresented: $showGuestAlert) {
             Button("Sign In") {
@@ -411,6 +493,10 @@ struct PinInfoView: View {
             } else if !authService.isGuest {
                 actionButton(icon: "flag", label: "Report") {
                     showReportSheet = true
+                }
+
+                actionButton(icon: "person.slash.fill", label: "Block", destructive: true) {
+                    showBlockConfirm = true
                 }
             }
         }
@@ -680,6 +766,11 @@ struct PinInfoView: View {
                             let text = newCommentText
                             newCommentText = ""
                             Task {
+                                guard ContentFilter.isClean(text) else {
+                                    showCommentFilterAlert = true
+                                    isPostingComment = false
+                                    return
+                                }
                                 await viewModel.addComment(
                                     to: currentPin,
                                     text: text,
@@ -754,8 +845,8 @@ struct PinInfoView: View {
 
             Spacer()
 
-            // Delete button for own comments
             if comment.authorUID == Auth.auth().currentUser?.uid {
+                // Delete button for own comments
                 Button {
                     Task {
                         if let commentID = comment.id {
@@ -769,6 +860,21 @@ struct PinInfoView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+            } else if !authService.isGuest {
+                // Report button for other users' comments
+                Menu {
+                    Button {
+                        commentToReport = comment
+                        showCommentReportSheet = true
+                    } label: {
+                        Label("Report Comment", systemImage: "flag")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 24, height: 24)
+                }
             }
         }
         .padding(.vertical, 10)
@@ -1060,6 +1166,10 @@ struct PinInfoView: View {
         HStack {
             if isEditing {
                 Button {
+                    guard ContentFilter.isClean(editedName) && ContentFilter.isClean(editedDetails) else {
+                        showEditContentFilterAlert = true
+                        return
+                    }
                     isSaving = true
                     Task {
                         await viewModel.updatePin(

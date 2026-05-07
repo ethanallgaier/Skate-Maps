@@ -31,6 +31,7 @@ struct AddPinView: View {
     @State private var coordinate: CLLocationCoordinate2D?
     @State private var locationName: String?
     @State private var showLocationPicker = false
+    @State private var showContentFilterAlert = false
     
     @Environment(AuthService.self) var authService
     
@@ -288,6 +289,11 @@ struct AddPinView: View {
             }
             .navigationTitle("New Spot")
             .navigationBarTitleDisplayMode(.inline)
+            .alert("Content Not Allowed", isPresented: $showContentFilterAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Your spot name or details contain inappropriate content. Please revise and try again.")
+            }
             .fullScreenCover(isPresented: $showCamera) {
                 CameraPicker(images: $selectedImages)
             }
@@ -318,6 +324,11 @@ struct AddPinView: View {
                         ProgressView()
                     } else {
                         Button("Create") {
+                            // Check for objectionable content
+                            if !ContentFilter.isClean(pinName) || !ContentFilter.isClean(pinDetails) {
+                                showContentFilterAlert = true
+                                return
+                            }
                             isSaving = true
                             Task {
                                 var images: [UIImage] = []

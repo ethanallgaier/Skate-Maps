@@ -25,9 +25,9 @@ struct MapView: View {
     @State private var currentRegion: MKCoordinateRegion = MKCoordinateRegion()
     
     var filteredPins: [PinInfo] {
-        guard !selectedTypes.isEmpty else { return viewModel.pins }
+        guard !selectedTypes.isEmpty else { return viewModel.filteredPins }
         
-        return viewModel.pins.filter { pin in
+        return viewModel.filteredPins.filter { pin in
             pin.spotTypes.contains { type in
                 selectedTypes.contains(type)
             }

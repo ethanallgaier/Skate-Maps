@@ -10,7 +10,7 @@ struct ProfileView: View {
     @Environment(AuthService.self) var authService
     var profileRefreshID: UUID = UUID()
     var validSavedPins: [PinInfo] {
-        viewModel.pins.filter { viewModel.savedPinIDs.contains($0.id ?? "") }
+        viewModel.filteredPins.filter { viewModel.savedPinIDs.contains($0.id ?? "") }
     }
 
 
@@ -97,7 +97,7 @@ struct ProfileView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink(destination: SettingsView()) {
+                    NavigationLink(destination: SettingsView(viewModel: viewModel)) {
                         Image(systemName: "gear")
                     }
                 }

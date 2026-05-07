@@ -10,6 +10,7 @@ import PhotosUI
 import FirebaseAuth
 
 struct SettingsView: View {
+    @ObservedObject var viewModel: MapViewModel
     @Environment(AuthService.self) var authService
     @Environment(\.dismiss) var dismiss
     
@@ -161,6 +162,28 @@ struct SettingsView: View {
                 }
             }
             
+            // MARK: - BLOCKED USERS
+            if !viewModel.blockedUserIDs.isEmpty {
+                Section {
+                    ForEach(Array(viewModel.blockedUserIDs), id: \.self) { uid in
+                        HStack {
+                            Image(systemName: "person.crop.circle.badge.xmark")
+                                .foregroundStyle(.red)
+                            Text(viewModel.username(for: uid))
+                                .font(.body)
+                            Spacer()
+                            Button("Unblock") {
+                                Task { await viewModel.unblockUser(uid) }
+                            }
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.blue)
+                        }
+                    }
+                } header: {
+                    Text("Blocked Users")
+                }
+            }
+            
             // MARK: - LEGAL
             Section {
                 NavigationLink {
@@ -211,12 +234,18 @@ struct SettingsView: View {
         // MARK: - SHEETS
         .sheet(isPresented: $showEditUsername) {
             EditFieldSheet(title: "Username", placeholder: "New username", current: authService.currentUser?.username ?? "") { newValue in
+                guard ContentFilter.isClean(newValue) else {
+                    throw ContentFilterError.objectionableContent
+                }
                 try await authService.updateUsername(newValue)
             }
         }
         //BIO
         .sheet(isPresented: $showEditBio) {
             EditFieldSheet(title: "Bio", placeholder: "Tell people about yourself", current: authService.currentUser?.bio ?? "", multiline: true) { newValue in
+                guard ContentFilter.isClean(newValue) else {
+                    throw ContentFilterError.objectionableContent
+                }
                 try await authService.updateBio(newValue)
             }
         }
@@ -491,7 +520,7 @@ struct SettingsView: View {
     }
 }
 #Preview {
-    NavigationStack { SettingsView() }
+    NavigationStack { SettingsView(viewModel: MapViewModel()) }
         .environment(AuthService())
 }
 

@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>SkateMap needs access to your camera to take photos of skate spots.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SkateMap needs access to your photo library to add photos of skate spots.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>SkateMap uses your location to show nearby skate spots on the map.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

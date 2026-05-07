@@ -14,7 +14,7 @@ struct SavedSpotsView: View {
     @Environment(\.dismiss) var dismiss
 
     var savedPins: [PinInfo] {
-        viewModel.pins.filter { pin in
+        viewModel.filteredPins.filter { pin in
             guard let id = pin.id else { return false }
             return viewModel.savedPinIDs.contains(id)
         }

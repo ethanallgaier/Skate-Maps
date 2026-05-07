@@ -17,6 +17,11 @@ struct UserProfileView: View {
     @State private var isLoading = true
     @State private var selectedPin: PinInfo?
     @State private var showPinDetail = false
+    @State private var showBlockConfirm = false
+    @State private var showBlockedAlert = false
+    @State private var showReportSheet = false
+    @State private var reportReason = ""
+    @State private var showReportConfirmation = false
     @Namespace private var pinTransition
 
     @Environment(\.dismiss) var dismiss
@@ -113,6 +118,93 @@ struct UserProfileView: View {
         .scrollIndicators(.hidden)
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if !isCurrentUser {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            showReportSheet = true
+                        } label: {
+                            Label("Report User", systemImage: "flag")
+                        }
+                        if viewModel.isBlocked(userID) {
+                            Button {
+                                Task { await viewModel.unblockUser(userID) }
+                            } label: {
+                                Label("Unblock User", systemImage: "person.badge.plus")
+                            }
+                        } else {
+                            Button(role: .destructive) {
+                                showBlockConfirm = true
+                            } label: {
+                                Label("Block User", systemImage: "person.slash.fill")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
+            }
+        }
+        .confirmationDialog("Block this user?", isPresented: $showBlockConfirm, titleVisibility: .visible) {
+            Button("Block", role: .destructive) {
+                Task {
+                    await viewModel.blockUser(userID)
+                    showBlockedAlert = true
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Their content will be hidden from your feed. This also notifies our moderation team.")
+        }
+        .alert("User Blocked", isPresented: $showBlockedAlert) {
+            Button("OK") { dismiss() }
+        } message: {
+            Text("You will no longer see content from this user.")
+        }
+        .sheet(isPresented: $showReportSheet) {
+            NavigationStack {
+                Form {
+                    Section("Why are you reporting this user?") {
+                        Picker("Reason", selection: $reportReason) {
+                            Text("Select a reason").tag("")
+                            Text("Inappropriate content").tag("Inappropriate content")
+                            Text("Spam").tag("Spam")
+                            Text("Harassment").tag("Harassment")
+                            Text("Impersonation").tag("Impersonation")
+                            Text("Other").tag("Other")
+                        }
+                    }
+                }
+                .navigationTitle("Report User")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") {
+                            reportReason = ""
+                            showReportSheet = false
+                        }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Submit") {
+                            Task {
+                                await viewModel.reportUser(userID, reason: reportReason)
+                                reportReason = ""
+                                showReportSheet = false
+                                showReportConfirmation = true
+                            }
+                        }
+                        .disabled(reportReason.isEmpty)
+                    }
+                }
+            }
+            .presentationDetents([.medium])
+        }
+        .alert("Report Submitted", isPresented: $showReportConfirmation) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Thanks for letting us know. We'll review this user's account.")
+        }
         .task {
             await loadUser()
         }
@@ -138,7 +230,7 @@ struct UserProfileView: View {
         }
 
         // Load user's pins
-        userPins = viewModel.pins.filter { $0.createdByUID == userID }
+        userPins = viewModel.filteredPins.filter { $0.createdByUID == userID }
         isLoading = false
     }
 }

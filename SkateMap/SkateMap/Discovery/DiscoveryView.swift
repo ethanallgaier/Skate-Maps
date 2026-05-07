@@ -31,7 +31,7 @@ struct DiscoveryView: View {
     // MARK: - Data
 
     var spotOfTheDay: PinInfo? {
-        let pins = viewModel.pins
+        let pins = viewModel.filteredPins
         guard !pins.isEmpty else { return nil }
         let daysSinceEpoch = Calendar.current.dateComponents([.day], from: Date(timeIntervalSince1970: 0), to: Date()).day ?? 0
         let sorted = pins.sorted { ($0.id ?? "") < ($1.id ?? "") }
@@ -42,7 +42,7 @@ struct DiscoveryView: View {
 
     var nearMeSpots: [PinInfo] {
         guard locationManager.userLocation != nil else { return [] }
-        return viewModel.pins
+        return viewModel.filteredPins
             .compactMap { pin -> (PinInfo, Double)? in
                 guard let dist = locationManager.distance(to: pin.coordinate),
                       dist <= maxDistanceMeters else { return nil }
@@ -55,14 +55,14 @@ struct DiscoveryView: View {
 
     var newSpots: [PinInfo] {
         let cutoff = Calendar.current.date(byAdding: .day, value: -14, to: Date()) ?? Date()
-        return viewModel.pins
+        return viewModel.filteredPins
             .filter { $0.time >= cutoff }
             .sorted { $0.time > $1.time }
     }
 
     var trendingSpots: [PinInfo] {
         Array(
-            viewModel.pins
+            viewModel.filteredPins
                 .filter { !$0.ratings.isEmpty }
                 .sorted { a, b in
                     let scoreA = Double(a.ratings.count) * a.averageRating
@@ -74,7 +74,7 @@ struct DiscoveryView: View {
     }
 
     var curatedCollections: [CuratedCollection] {
-        let allPins = viewModel.pins
+        let allPins = viewModel.filteredPins
         var collections: [CuratedCollection] = []
 
         // Best Rails
